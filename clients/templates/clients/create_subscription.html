@@ -1,0 +1,17 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Add Subscription</title>
+</head>
+<body>
+
+    <h1>Add Subscription</h1>
+
+    <form method="POST">
+        {% csrf_token %}
+        {{ form.as_p }}
+        <button type="submit">Save Subscription</button>
+    </form>
+
+</body>
+</html>

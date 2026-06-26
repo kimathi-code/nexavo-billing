@@ -1,0 +1,76 @@
+2026-06-18 00:44:22,222 INFO mpesa ===== M-PESA CALLBACK =====
+2026-06-18 00:44:22,223 INFO mpesa {'TransID': 'NGROK002', 'TransAmount': 100, 'BillRefNumber': 'NXV-1001', 'MSISDN': '254791018986'}
+2026-06-18 00:44:22,880 INFO mpesa {'success': True, 'client': 'Kimathi Devis', 'payment_id': 25, 'transaction_id': 5}
+2026-06-18 00:44:22,880 INFO mpesa ===== END CALLBACK =====
+Error in initiate_stk_push_view
+Traceback (most recent call last):
+  File "/home/kimkali/projects/clients/views.py", line 327, in initiate_stk_push_view
+    result = mpesa_service.initiate_stk_push(client, amount)
+             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+AttributeError: 'MpesaService' object has no attribute 'initiate_stk_push'
+Initiating STK Push | Account: NXV-1001 | Amount: 10
+Unexpected error while initiating STK Push
+Traceback (most recent call last):
+  File "/home/kimkali/projects/services/mpesa_service.py", line 143, in initiate_stk_push
+    response.raise_for_status()
+  File "/home/kimkali/projects/.isp_venv/lib/python3.12/site-packages/requests/models.py", line 1167, in raise_for_status
+    raise HTTPError(http_error_msg, response=self)
+requests.exceptions.HTTPError: 400 Client Error: Bad Request for url: https://sandbox.safaricom.co.ke/mpesa/stkpush/v1/processrequest
+Initiating STK Push | Account: NXV-1001 | Amount: 10
+STK Payload: {'BusinessShortCode': '174379', 'Password': 'MTc0Mzc5YmZiMjc5ZjlhYTliZGJjZjE1OGU5N2RkNzFhNDY3Y2QyZTBjODkzMDU5YjEwZjc4ZTZiNzJhZGExZWQyYzkxOTIwMjYwNjI1MTIzMTE4', 'Timestamp': '20260625123118', 'TransactionType': 'CustomerPayBillOnline', 'Amount': 10, 'PartyA': '254791018986', 'PartyB': '174379', 'PhoneNumber': '254791018986', 'CallBackURL': 'https://superadjacent-nonrealizable-ninfa.ngrok-free.dev/clients/mpesa/stk-callback/', 'AccountReference': 'NXV-1001', 'TransactionDesc': 'Internet Subscription'}
+Daraja Response: {'MerchantRequestID': '0357-4838-96f0-d0c4da74fb9815158', 'CheckoutRequestID': 'ws_CO_25062026153119767791018986', 'ResponseCode': '0', 'ResponseDescription': 'Success. Request accepted for processing', 'CustomerMessage': 'Success. Request accepted for processing'}
+Error in initiate_stk_push_view
+Traceback (most recent call last):
+  File "/home/kimkali/projects/clients/views.py", line 331, in initiate_stk_push_view
+    return JsonResponse(result, status=status_code)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/kimkali/projects/.isp_venv/lib/python3.12/site-packages/django/http/response.py", line 761, in __init__
+    data = json.dumps(data, cls=encoder, **json_dumps_params)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/usr/lib/python3.12/json/__init__.py", line 238, in dumps
+    **kw).encode(obj)
+          ^^^^^^^^^^^
+  File "/usr/lib/python3.12/json/encoder.py", line 200, in encode
+    chunks = self.iterencode(o, _one_shot=True)
+             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/usr/lib/python3.12/json/encoder.py", line 258, in iterencode
+    return _iterencode(o, 0)
+           ^^^^^^^^^^^^^^^^^
+  File "/home/kimkali/projects/.isp_venv/lib/python3.12/site-packages/django/core/serializers/json.py", line 113, in default
+    return super().default(o)
+           ^^^^^^^^^^^^^^^^^^
+  File "/usr/lib/python3.12/json/encoder.py", line 180, in default
+    raise TypeError(f'Object of type {o.__class__.__name__} '
+TypeError: Object of type StkPushRequest is not JSON serializable
+===== STK CALLBACK =====
+{'Body': {'stkCallback': {'MerchantRequestID': '0357-4838-96f0-d0c4da74fb9815158', 'CheckoutRequestID': 'ws_CO_25062026153119767791018986', 'ResultCode': 0, 'ResultDesc': 'The service request is processed successfully.', 'CallbackMetadata': {'Item': [{'Name': 'Amount', 'Value': 10.0}, {'Name': 'MpesaReceiptNumber', 'Value': 'UFP3E9JI5V'}, {'Name': 'Balance', 'Value': 0.0}, {'Name': 'TransactionDate', 'Value': 20260625153138}, {'Name': 'PhoneNumber', 'Value': 254791018986}]}}}}
+STK Callback Error
+Traceback (most recent call last):
+  File "/home/kimkali/projects/clients/views.py", line 532, in stk_push_callback
+    result = process_payment_transaction(
+             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/kimkali/projects/services/mpesa_service.py", line 306, in process_payment_transaction
+    payment = Payment.objects.create(
+              ^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/kimkali/projects/.isp_venv/lib/python3.12/site-packages/django/db/models/manager.py", line 87, in manager_method
+    return getattr(self.get_queryset(), name)(*args, **kwargs)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/kimkali/projects/.isp_venv/lib/python3.12/site-packages/django/db/models/query.py", line 669, in create
+    obj.save(force_insert=True, using=self.db)
+  File "/home/kimkali/projects/.isp_venv/lib/python3.12/site-packages/django/db/models/base.py", line 874, in save
+    self.save_base(
+  File "/home/kimkali/projects/.isp_venv/lib/python3.12/site-packages/django/db/models/base.py", line 981, in save_base
+    post_save.send(
+  File "/home/kimkali/projects/.isp_venv/lib/python3.12/site-packages/django/dispatch/dispatcher.py", line 209, in send
+    response = receiver(signal=self, sender=sender, **named)
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/kimkali/projects/clients/signals.py", line 29, in process_payment
+    client.wallet_balance += instance.amount
+TypeError: unsupported operand type(s) for +=: 'decimal.Decimal' and 'float'
+Initiating STK Push | Account: NXV-1001 | Amount: 10
+STK Payload: {'BusinessShortCode': '174379', 'Password': 'MTc0Mzc5YmZiMjc5ZjlhYTliZGJjZjE1OGU5N2RkNzFhNDY3Y2QyZTBjODkzMDU5YjEwZjc4ZTZiNzJhZGExZWQyYzkxOTIwMjYwNjI1MTMxMzA2', 'Timestamp': '20260625131306', 'TransactionType': 'CustomerPayBillOnline', 'Amount': 10, 'PartyA': '254791018986', 'PartyB': '174379', 'PhoneNumber': '254791018986', 'CallBackURL': 'https://superadjacent-nonrealizable-ninfa.ngrok-free.dev/clients/mpesa/stk-callback/', 'AccountReference': 'NXV-1001', 'TransactionDesc': 'Internet Subscription'}
+Daraja Response: {'MerchantRequestID': '6272-4221-9455-9339acb922d81624', 'CheckoutRequestID': 'ws_CO_25062026161307502791018986', 'ResponseCode': '0', 'ResponseDescription': 'Success. Request accepted for processing', 'CustomerMessage': 'Success. Request accepted for processing'}
+===== STK CALLBACK =====
+{'Body': {'stkCallback': {'MerchantRequestID': '6272-4221-9455-9339acb922d81624', 'CheckoutRequestID': 'ws_CO_25062026161307502791018986', 'ResultCode': 0, 'ResultDesc': 'The service request is processed successfully.', 'CallbackMetadata': {'Item': [{'Name': 'Amount', 'Value': 10.0}, {'Name': 'MpesaReceiptNumber', 'Value': 'UFP3E9JLI3'}, {'Name': 'Balance', 'Value': 0.0}, {'Name': 'TransactionDate', 'Value': 20260625161325}, {'Name': 'PhoneNumber', 'Value': 254791018986}]}}}}
+STK payment processed successfully | CheckoutID: ws_CO_25062026161307502791018986 | Receipt: UFP3E9JLI3 | MerchantRequestID: 6272-4221-9455-9339acb922d81624 | Billing Engine Result: {'success': True, 'client': 'Kimathi Devis', 'payment_id': 27, 'transaction_id': 7}
+===== END STK CALLBACK =====

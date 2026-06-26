@@ -1,0 +1,110 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Clients List</title>
+    <style>
+        /* Container for the navigation bar */
+        .navbar {
+            display: flex;
+            justify-content: space-between; /* Pushes content to opposite ends */
+            align-items: center; /* Vertically centers the links and button */
+            margin-bottom: 20px;
+        }
+
+        /* Group for the left-side links */
+        .nav-links {
+            display: flex;
+            gap: 10px; /* Adds space between the links */
+        }
+
+        /* Basic styling for the logout button */
+        .logout-form button {
+            background-color: #f44336;
+            color: white;
+            border: none;
+            padding: 8px 16px;
+            cursor: pointer;
+            border-radius: 4px;
+        }
+
+        .logout-form button:hover {
+            background-color: #d32f2f;
+        }
+    </style>
+</head>
+<body>
+
+    <h1>All Clients</h1>
+    <form method="GET">
+
+        <input
+            type="text"
+            name="q"
+            placeholder="Search client..."
+        >
+
+        <button type="submit">Search</button>
+
+    </form>
+
+    <!-- Navbar Container -->
+    <div class="navbar">
+        <div class="nav-links">
+            <a href="{% url 'create_client' %}">Add New Client</a>
+            <a href="{% url 'create_subscription' %}">Add Subscription</a>
+            <a href="{% url 'active_clients' %}">Active Clients</a> |
+            <a href="{% url 'expired_clients' %}">Expired Clients</a> |
+            <a href="{% url 'no_subscription_clients' %}">No Subscription</a>
+        </div>
+
+        <form action="{% url 'logout' %}" method="POST" class="logout-form">
+            {% csrf_token %}
+            <button type="submit">Logout</button>
+        </form>
+    </div>
+
+    <hr>
+
+    <table border="1">
+        <tr>
+            <th>Name</th>
+            <th>Account Number</th>
+            <th>Phone</th>
+            <th>Email</th>
+            <th>Location</th>
+            <th>Created</th>
+            <th>Actions</th>
+            <th>Status</th>
+        </tr>
+
+        {% for client in clients %}
+        <tr>
+            <td>{{ client.name }}</td>
+            <td>{{ client.account_number }}</td>
+            <td>{{ client.phone }}</td>
+            <td>{{ client.email }}</td>
+            <td>{{ client.location }}</td>
+            <td>{{ client.created_at }}</td>
+            <td>
+                <a href="{% url 'edit_client' client.id %}">Edit</a> |
+                <a href="{% url 'delete_client' client.id %}">Delete</a>
+            </td>
+            <td>
+                {% with sub=client.subscription_set.last %}
+                    {% if sub %}
+                        {% if sub.is_active %}
+                            Active
+                        {% else %}
+                            Expired
+                        {% endif %}
+                    {% else %}
+                        No Subscription
+                    {% endif %}
+                {% endwith %}
+            </td>
+        </tr>
+        {% endfor %}
+    </table>
+
+</body>
+</html>

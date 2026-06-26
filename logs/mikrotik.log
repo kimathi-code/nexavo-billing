@@ -1,0 +1,4 @@
+Initiating enable sequence for PPP secret: Netis_router
+Successfully enabled PPP secret for user: Netis_router
+Attempting to disconnect active session for user: Netis_router
+No active session found for user: Netis_router

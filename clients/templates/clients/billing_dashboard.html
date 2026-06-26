@@ -1,0 +1,124 @@
+<h1>Billing Dashboard</h1>
+
+<hr>
+
+<h3>Total Clients: {{ total_clients }}</h3>
+
+<h3>Active Subscriptions: {{ active_count }}</h3>
+
+<h3>Expired Subscriptions: {{ expired_count }}</h3>
+
+<h3>Suspended Subscriptions: {{ suspended_count }}</h3>
+
+<h3>Clients With Credit: {{ clients_with_credit_count }}</h3>
+
+<h3>Total Wallet Balance:
+    KES {{ total_wallet_balance }}
+</h3>
+
+<div class="bg-gray-800 border border-gray-700 rounded-lg p-5">
+
+    <h3 class="text-sm font-bold mb-4">
+        Clients With Credit
+    </h3>
+
+    <table class="w-full text-sm">
+
+        <thead>
+            <tr>
+                <th>Account</th>
+                <th>Client</th>
+                <th>Wallet Balance</th>
+            </tr>
+        </thead>
+
+        <tbody>
+
+            {% for client in clients_with_credit %}
+
+            <tr>
+                <td>{{ client.account_number }}</td>
+                <td>{{ client.name }}</td>
+                <td>
+                    KES {{ client.wallet_balance }}
+                </td>
+            </tr>
+
+            {% empty %}
+
+            <tr>
+                <td colspan="3">
+                    No clients currently have credit.
+                </td>
+            </tr>
+
+            {% endfor %}
+
+        </tbody>
+
+    </table>
+
+</div>
+<div class="bg-gray-800 border border-gray-700 rounded-lg p-5">
+
+    <h3 class="text-sm font-bold mb-4">
+        Expired Clients
+    </h3>
+
+    <table class="w-full text-sm">
+
+        <thead>
+
+            <tr>
+                <th>Account</th>
+                <th>Client</th>
+                <th>Package Cost</th>
+                <th>Wallet</th>
+                <th>Balance Due</th>
+            </tr>
+
+        </thead>
+
+        <tbody>
+
+            {% for item in expired_clients %}
+
+            <tr>
+
+                <td>
+                    {{ item.client.account_number }}
+                </td>
+
+                <td>
+                    {{ item.client.name }}
+                </td>
+
+                <td>
+                    KES {{ item.package_price }}
+                </td>
+
+                <td>
+                    KES {{ item.wallet_balance }}
+                </td>
+
+                <td>
+                    KES {{ item.outstanding_balance }}
+                </td>
+
+            </tr>
+
+            {% empty %}
+
+            <tr>
+                <td colspan="5">
+                    No expired clients.
+                </td>
+            </tr>
+
+            {% endfor %}
+
+        </tbody>
+
+    </table>
+
+</div>

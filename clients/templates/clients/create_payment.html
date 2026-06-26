@@ -1,0 +1,13 @@
+<h2>Add Payment</h2>
+
+<form method="POST">
+
+    {% csrf_token %}
+
+    {{ form.as_p }}
+
+    <button type="submit">
+        Save Payment
+    </button>
+
+</form>

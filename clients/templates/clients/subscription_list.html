@@ -1,0 +1,33 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>{{ title }}</title>
+</head>
+<body>
+
+    <h1>{{ title }}</h1>
+
+    <table border="1">
+
+        <tr>
+            <th>Client</th>
+            <th>Package</th>
+            <th>Amount</th>
+            <th>End Date</th>
+        </tr>
+
+        {% for sub in subscriptions %}
+
+        <tr>
+            <td>{{ sub.client.name }}</td>
+            <td>{{ sub.package.name }}</td>
+            <td>{{ sub.amount }}</td>
+            <td>{{ sub.end_date }}</td>
+        </tr>
+
+        {% endfor %}
+
+    </table>
+
+</body>
+</html>

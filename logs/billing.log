@@ -1,0 +1,23 @@
+No expired subscriptions.
+No expired subscriptions.
+No expired subscriptions.
+Insufficient wallet balance for Doreen Mukami
+Insufficient wallet balance for Doreen Mukami
+Insufficient wallet balance for Pacificusjoy Kendi
+Insufficient wallet balance for Doreen Mukami
+Insufficient wallet balance for Kezziah Njoki Nyagah
+Insufficient wallet balance for Pacificusjoy Kendi
+Subscription renewed for Annmerry K Kaburu
+Insufficient wallet balance for Doreen Mukami
+Insufficient wallet balance for Doreen Mukami
+Insufficient wallet balance for Doreen Mukami
+Subscription renewed for Kezziah Njoki Nyagah
+Insufficient wallet balance for Pacificusjoy Kendi
+Subscription renewed for Martin Mbaabu
+Insufficient wallet balance for Doreen Mukami
+Traceback (most recent call last):
+  File "/home/kimkali/projects/scripts/billing/check_due_subscriptions.py", line 24, in <module>
+    from services.subscription_service import (
+  File "/home/kimkali/projects/services/subscription_service.py", line 12, in <module>
+    from scripts.mikrotik.services import (
+ImportError: cannot import name 'get_mikrotik_api' from 'scripts.mikrotik.services' (/home/kimkali/projects/scripts/mikrotik/services.py)

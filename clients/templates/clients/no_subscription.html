@@ -1,0 +1,21 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>No Subscription</title>
+</head>
+<body>
+
+    <h1>Clients Without Subscription</h1>
+
+    <ul>
+
+    {% for client in clients %}
+
+        <li>{{ client.name }} - {{ client.phone }}</li>
+
+    {% endfor %}
+
+    </ul>
+
+</body>
+</html>
