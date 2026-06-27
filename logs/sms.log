@@ -1,2 +1,0 @@
-Sending SMS to +254791018986
-{'SMSMessageData': {'Message': 'Sent to 1/1 Total Cost: KES 0.8000', 'Recipients': [{'cost': 'KES 0.8000', 'messageId': 'ATXid_1a38822e7ed6897eb020fa12f24fa88b', 'messageParts': 1, 'number': '+254791018986', 'status': 'Success', 'statusCode': 100}]}}
