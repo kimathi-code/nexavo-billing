@@ -1,0 +1,20 @@
+# Python Virtual Environment
+.isp_venv/
+
+# Python Cache
+__pycache__/ 
+*.py[cod] 
+
+# Environment Variables
+.env
+
+# Local Database
+db.sqlite3
+db_backup_*.sqlite3
+
+# Log Files
+logs/
+*.log
+
+# VS Code
+.vscode/
