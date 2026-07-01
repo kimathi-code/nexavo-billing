@@ -46,4 +46,12 @@ This project follows semantic versioning.
 
 ---
 
+### Changed
+- Added `.env.example` for easier setup.
+- Improved installation instructions in `README.md`.
+- Automatically create the `logs` directory during startup.
+- Moved MikroTik configuration into environment variables.
+- Renamed `scripts/mikrotik/services.py` to `mikrotik_services.py` to avoid module name collisions.
+- Added `services/__init__.py` to make the package explicit.
+
 Future releases will continue to be documented here.

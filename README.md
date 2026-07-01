@@ -93,3 +93,44 @@ The project is being built with a strong focus on automation, reliability, and s
 ## Vision
 
 Nexavo aims to become a complete ISP Operations Support System that enables Internet Service Providers to automate customer onboarding, billing, payments, network provisioning, and service monitoring through a unified platform.
+
+## Installation
+
+Clone the repository:
+
+```bash
+git clone https://github.com/kimathi-code/nexavo-billing.git
+```
+
+Create a virtual environment:
+
+```bash
+python3 -m venv .isp_venv
+source .isp_venv/bin/activate
+```
+
+Install dependencies:
+
+```bash
+pip install -r requirements.txt
+```
+
+Create your environment file:
+
+```bash
+cp .env.example .env
+```
+
+Edit `.env` and provide your own credentials.
+
+Run migrations:
+
+```bash
+python manage.py migrate
+```
+
+Start the development server:
+
+```bash
+python manage.py runserver
+```
