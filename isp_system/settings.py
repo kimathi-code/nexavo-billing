@@ -16,6 +16,10 @@ from pathlib import Path
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
 BASE_DIR = Path(__file__).resolve().parent.parent
 
+# Directory for application log files
+LOG_DIR = BASE_DIR / "logs"
+# Ensure the log directory exists
+LOG_DIR.mkdir(exist_ok=True)
 
 # Quick-start development settings - unsuitable for production
 # See https://docs.djangoproject.com/en/6.0/howto/deployment/checklist/
@@ -152,51 +156,31 @@ LOGGING = {
         "django_file": {
             "level": "ERROR",
             "class": "logging.FileHandler",
-            "filename": os.path.join(
-                BASE_DIR,
-                "logs",
-                "django.log"
-            ),
+            "filename": LOG_DIR / "django.log",
         },
 
         "mpesa_file": {
             "level": "INFO",
             "class": "logging.FileHandler",
-            "filename": os.path.join(
-                BASE_DIR,
-                "logs",
-                "mpesa.log"
-            ),
+            "filename": LOG_DIR / "mpesa.log",
         },
 
         "sms_file": {
             "level": "INFO",
             "class": "logging.FileHandler",
-            "filename": os.path.join(
-                BASE_DIR,
-                "logs",
-                "sms.log"
-            ),
+            "filename": LOG_DIR / "sms.log",
         },
 
         "mikrotik_file": {
             "level": "INFO",
             "class": "logging.FileHandler",
-            "filename": os.path.join(
-                BASE_DIR,
-                "logs",
-                "mikrotik.log"
-            ),
+            "filename": LOG_DIR / "mikrotik.log",
         },
 
         "billing_file": {
             "level": "INFO",
             "class": "logging.FileHandler",
-            "filename": os.path.join(
-                BASE_DIR,
-                "logs",
-                "billing.log"
-            ),
+            "filename": LOG_DIR / "billing.log",
         },
 
     },

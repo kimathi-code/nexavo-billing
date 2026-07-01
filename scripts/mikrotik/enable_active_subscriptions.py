@@ -19,7 +19,7 @@ from clients.models import Subscription, MikroTikLog
 
 from scripts.mikrotik.connect import get_mikrotik_api
 
-from scripts.mikrotik.services import (
+from scripts.mikrotik.mikrotik_services import (
     enable_ppp_secret
 )
 

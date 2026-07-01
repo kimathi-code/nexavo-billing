@@ -1,13 +1,35 @@
 import routeros_api
+import os
 
+import routeros_api
+
+from dotenv import load_dotenv
+
+load_dotenv()
 
 def get_mikrotik_api():
 
     connection = routeros_api.RouterOsApiPool(
-        '128.7.7.1',
-        username='admin',
-        password='Butterfly@Energy95',
-        plaintext_login=True
+
+        os.getenv("MIKROTIK_HOST"),
+
+        username=os.getenv("MIKROTIK_USERNAME"),
+
+        password=os.getenv("MIKROTIK_PASSWORD"),
+
+        port=int(
+            os.getenv(
+                "MIKROTIK_PORT",
+                "8728"
+            )
+        ),
+
+        plaintext_login=(
+            os.getenv(
+                "MIKROTIK_PLAINTEXT_LOGIN",
+                "True"
+            ).lower() == "true"
+        )
     )
 
     api = connection.get_api()
