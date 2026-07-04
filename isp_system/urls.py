@@ -32,4 +32,10 @@ urlpatterns = [
         auth_views.LogoutView.as_view(),
         name='logout'
     ),
+    path(
+        "portal/",
+        include(
+            "portal.urls"
+        )
+    ),
 ]
