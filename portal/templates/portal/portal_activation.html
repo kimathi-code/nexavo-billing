@@ -1,0 +1,98 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Activate Nexavo Portal</title>
+    <!-- Tailwind CSS for modern, clean styling -->
+    <script src="https://cdn.jsdelivr.net/npm/@tailwindcss/browser@4"></script>
+    <style>
+        /* Smooth transitions for interactive elements */
+        .transition-all { transition: all 0.2s ease-in-out; }
+    </style>
+</head>
+<body class="bg-slate-50 text-slate-800 font-sans min-h-screen flex flex-col justify-center items-center p-4">
+
+    <!-- Portal Container Card -->
+    <div class="w-full max-w-md bg-white rounded-2xl shadow-xl border border-slate-100 p-8 transition-all">
+        
+        <!-- Brand Header -->
+        <div class="text-center mb-8">
+            <h1 class="text-2xl font-extrabold tracking-tight text-slate-900 mb-2">
+                NEXAVO <span class="text-indigo-600">PORTAL</span>
+            </h1>
+            <p class="text-sm text-slate-500">
+                Activate your account to manage your internet services, view billing, and track subscriptions.
+            </p>
+        </div>
+
+        <!-- Django Messages / Alerts -->
+        {% if messages %}
+            <div class="mb-6 space-y-2">
+                {% for message in messages %}
+                    <div class="p-4 rounded-xl text-sm font-medium {% if message.tags == 'error' %}bg-red-50 text-red-700 border border-red-100{% else %}bg-emerald-50 text-emerald-700 border border-emerald-100{% endif %}">
+                        {{ message }}
+                    </div>
+                {% endfor %}
+            </div>
+        {% endif %}
+
+        <!-- Activation Form -->
+        <form method="POST" class="space-y-5">
+            {% csrf_token %}
+
+            <!-- Form Fields Container -->
+            <div class="django-form-fields space-y-4">
+                {% if form.non_field_errors %}
+                    <div class="text-sm text-red-600 bg-red-50 p-3 rounded-lg">
+                        {{ form.non_field_errors }}
+                    </div>
+                {% endif %}
+
+                {% for field in form %}
+                    <div class="flex flex-col space-y-1.5">
+                        <label for="{{ field.id_for_label }}" class="text-xs font-bold uppercase tracking-wider text-slate-600">
+                            {{ field.label }}
+                        </label>
+                        
+                        <!-- Injecting styling into the native Django field widgets -->
+                        <div class="relative">
+                            {{ field }}
+                        </div>
+
+                        {% if field.help_text %}
+                            <p class="text-xs text-slate-400 mt-1">{{ field.help_text }}</p>
+                        {% endif %}
+
+                        {% for error in field.errors %}
+                            <p class="text-xs text-red-600 mt-1 font-medium">⚠️ {{ error }}</p>
+                        {% endfor %}
+                    </div>
+                {% endfor %}
+            </div>
+
+            <!-- Submit Button -->
+            <div class="pt-2">
+                <button type="submit" class="w-full bg-indigo-600 hover:bg-indigo-700 text-white font-semibold py-3 px-4 rounded-xl shadow-md hover:shadow-lg transition-all duration-200 cursor-pointer text-center tracking-wide">
+                    Activate Account
+                </button>
+            </div>
+        </form>
+
+    </div>
+
+    <!-- Footer / Support Link -->
+    <p class="text-xs text-slate-400 mt-6 text-center">
+        Need assistance? Contact Nexavo Solutions Support.
+    </p>
+
+    <!-- Optional: Tailwind Form Input Styling Hook -->
+    <script>
+        // Dynamically style the native Django form widgets to match Tailwind's look
+        document.querySelectorAll('.django-form-fields input, .django-form-fields select').forEach(input => {
+            input.className = "w-full px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-slate-800 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 transition-all text-sm";
+        });
+    </script>
+
+</body>
+</html>
