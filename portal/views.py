@@ -5,6 +5,8 @@ from django.shortcuts import (
 
 from django.contrib import messages
 
+from django.core.exceptions import ValidationError
+
 from .forms import (
     PortalActivationForm
 )
@@ -43,6 +45,14 @@ def portal_activation_view(
 
                 return redirect(
                     "portal_login"
+                )
+
+
+            except ValidationError as error:
+
+                messages.error(
+                    request,
+                    error.message
                 )
 
 
