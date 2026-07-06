@@ -7,6 +7,10 @@ from django.contrib import messages
 
 from django.core.exceptions import ValidationError
 
+from django.contrib.auth import authenticate, login
+
+from django.contrib.auth.decorators import login_required
+
 from .forms import (
     PortalActivationForm
 )
@@ -15,7 +19,7 @@ from .portal_activation_service import (
     activate_portal_account
 )
 
-
+# Portal activation view
 def portal_activation_view(
     request
 ):
@@ -40,7 +44,7 @@ def portal_activation_view(
 
                 messages.success(
                     request,
-                    "Portal account activated successfully."
+                    "Portal account activated successfully. Please log in to access your dashboard."
                 )
 
                 return redirect(
@@ -49,10 +53,16 @@ def portal_activation_view(
 
 
             except ValidationError as error:
+                # Safely parse the validation error string
+                error_msg = error.messages[0] if hasattr(error, 'messages') else str(error)
 
-                messages.error(
+                # Account is already active -> notify user and redirect to login
+                messages.info(
                     request,
-                    error.message
+                    f"{error_msg} Please log in to continue."
+                )
+                return redirect(
+                    "portal_login"
                 )
 
 
@@ -75,4 +85,35 @@ def portal_activation_view(
         {
             "form": form
         }
+    )
+
+# Portal login view 
+def portal_login(request):
+    if request.method == "POST":
+        username = request.POST.get("username")
+        password = request.POST.get("password")
+
+        user = authenticate(
+            request,
+            username=username,
+            password=password
+        )
+
+        if user is not None:
+            login(request, user)
+            return redirect("portal_dashboard")
+
+        messages.error(request, "Invalid username or password.")
+
+    return render(
+        request,
+        "portal/portal_login.html"
+    )
+
+# Portal dashboard view
+@login_required
+def portal_dashboard(request):
+    return render(
+        request,
+        "portal/portal_dashboard.html"
     )

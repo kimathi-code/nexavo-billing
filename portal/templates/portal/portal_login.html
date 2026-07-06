@@ -1,0 +1,103 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Nexavo Portal - Login</title>
+    <!-- Tailwind CSS for styling -->
+    <script src="https://cdn.jsdelivr.net/npm/@tailwindcss/browser@4"></script>
+    <style>
+        .transition-all { transition: all 0.2s ease-in-out; }
+    </style>
+</head>
+<body class="bg-slate-50 text-slate-800 font-sans min-h-screen flex flex-col justify-center items-center p-4">
+
+    <!-- Login Container Card -->
+    <div class="w-full max-w-md bg-white rounded-2xl shadow-xl border border-slate-100 p-8 transition-all">
+        
+        <!-- Brand Header -->
+        <div class="text-center mb-8">
+            <h1 class="text-2xl font-extrabold tracking-tight text-slate-900 mb-2">
+                NEXAVO <span class="text-indigo-600">PORTAL</span>
+            </h1>
+            <p class="text-sm text-slate-500">
+                Sign in to manage your high-speed internet connection, view invoices, or change your package.
+            </p>
+        </div>
+
+        <!-- Django Messages / Error Alerts -->
+        {% if messages %}
+            <div class="mb-6 space-y-2">
+                {% for message in messages %}
+                    <div class="p-4 rounded-xl text-sm font-medium {% if message.tags == 'error' %}bg-red-50 text-red-700 border border-red-100{% else %}bg-indigo-50 text-indigo-700 border border-indigo-100{% endif %}">
+                        {{ message }}
+                    </div>
+                {% endfor %}
+            </div>
+        {% endif %}
+
+        <!-- Login Form -->
+        <form method="POST" class="space-y-5">
+            {% csrf_token %}
+
+            <!-- Username Field -->
+            <div class="flex flex-col space-y-1.5">
+                <label for="username" class="text-xs font-bold uppercase tracking-wider text-slate-600">
+                    Username / Account Number
+                </label>
+                <input 
+                    type="text"
+                    id="username"
+                    name="username"
+                    required
+                    class="w-full px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-slate-800 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 transition-all text-sm"
+                    placeholder="Enter your username"
+                >
+            </div>
+
+            <!-- Password Field -->
+            <div class="flex flex-col space-y-1.5">
+                <div class="flex justify-between items-center">
+                    <label for="password" class="text-xs font-bold uppercase tracking-wider text-slate-600">
+                        Password
+                    </label>
+                    <!-- Optional: Link to a password reset view if you set one up later -->
+                    <a href="#" class="text-xs font-semibold text-indigo-600 hover:text-indigo-700 transition-all">
+                        Forgot Password?
+                    </a>
+                </div>
+                <input 
+                    type="password"
+                    id="password"
+                    name="password"
+                    required
+                    class="w-full px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-slate-800 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 transition-all text-sm"
+                    placeholder="••••••••"
+                >
+            </div>
+
+            <!-- Submit Button -->
+            <div class="pt-2">
+                <button type="submit" class="w-full bg-indigo-600 hover:bg-indigo-700 text-white font-semibold py-3 px-4 rounded-xl shadow-md hover:shadow-lg transition-all duration-200 cursor-pointer text-center tracking-wide">
+                    Sign In
+                </button>
+            </div>
+        </form>
+
+        <!-- Dynamic Context Link -->
+        <div class="mt-6 pt-6 border-t border-slate-100 text-center text-sm">
+            <span class="text-slate-500">First time here?</span>
+            <a href="{% url 'portal_activation' %}" class="font-semibold text-indigo-600 hover:text-indigo-700 transition-all ml-1">
+                Activate your account
+            </a>
+        </div>
+
+    </div>
+
+    <!-- Footer -->
+    <p class="text-xs text-slate-400 mt-6 text-center">
+        Secured access for Nexavo Solutions customers. 
+    </p>
+
+</body>
+</html>

@@ -10,4 +10,15 @@ urlpatterns = [
         name="portal_activation"
     ),
 
+    path(
+        "login/",
+        views.portal_login,
+        name="portal_login"
+    ),
+
+    path(
+        "dashboard/",
+        views.portal_dashboard,
+        name="portal_dashboard"
+    ),
 ]
