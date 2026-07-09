@@ -21,4 +21,9 @@ urlpatterns = [
         views.portal_dashboard,
         name="portal_dashboard"
     ),
+    path(
+        "activate/resend-code/",
+        views.portal_activation_resend_code,
+        name="portal_activation_resend_code"
+    )
 ]

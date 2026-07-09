@@ -1,22 +1,23 @@
 from django import forms
 
 
-class PortalActivationForm(
-    forms.Form
-):
-
+class PortalActivationRequestForm(forms.Form):
     account_number = forms.CharField(
-        max_length=20,
-        label="Account Number"
+        max_length=20
     )
 
-    phone_number = forms.CharField(
-        max_length=20,
-        label="Phone Number"
+    phone = forms.CharField(
+        max_length=20
+    )
+
+
+class PortalActivationConfirmForm(forms.Form):
+    otp_code = forms.CharField(
+        max_length=6
     )
 
     username = forms.CharField(
-        max_length=50
+        max_length=150
     )
 
     password = forms.CharField(

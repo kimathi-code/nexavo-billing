@@ -1,3 +1,8 @@
+import random
+from datetime import timedelta
+
+from django.utils import timezone
+
 from django.db import models
 
 from django.contrib.auth.models import User
@@ -42,3 +47,49 @@ class PortalAccount(models.Model):
         return (
             f"{self.client.name} Portal Account"
         )
+
+# OTP Model
+class PortalActivationOTP(models.Model):
+    client = models.ForeignKey(
+        "clients.Client",
+        on_delete=models.CASCADE,
+        related_name="portal_otps"
+    )
+
+    code = models.CharField(
+        max_length=6
+    )
+
+    is_used = models.BooleanField(
+        default=False
+    )
+
+    expires_at = models.DateTimeField()
+
+    created_at = models.DateTimeField(
+        auto_now_add=True
+    )
+
+    def has_expired(self):
+        return timezone.now() > self.expires_at
+
+
+    @classmethod
+    def generate(cls, client):
+        otp = str(
+            random.randint(
+                100000,
+                999999
+            )
+        )
+
+        return cls.objects.create(
+            client=client,
+            code=otp,
+            expires_at=timezone.now() + timedelta(minutes=10)
+        )
+
+
+    def __str__(self):
+        return f"{self.client.account_number} OTP"
+    
