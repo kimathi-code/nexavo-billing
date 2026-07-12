@@ -8,6 +8,10 @@ import os
 
 from dotenv import load_dotenv
 
+# TODO:
+# Centralize SMS sender ID configuration after verifying
+# consistent behavior across all SMS workflows.
+
 # Load environment variables
 load_dotenv()
 
@@ -18,6 +22,7 @@ USERNAME = os.getenv(
 API_KEY = os.getenv(
     "AT_API_KEY"
 )
+
 # Initialize Africa's Talking
 africastalking.initialize(
     USERNAME,
@@ -33,6 +38,7 @@ def send_sms(
     message,
     sender_id=None
 ):
+
     logger.info(
         f"Sending SMS to {phone_number}"
     )
@@ -60,31 +66,21 @@ def send_sms(
             ['Recipients'][0]
         )
 
+        status = recipient.get("status")
+
         return {
-
-            "success": True,
-
-            "status": recipient.get(
-                "status"
-            ),
-
-            "message_id": recipient.get(
-                "messageId"
-            ),
-
-            "response": response
+            "success": status == "Success",
+            "status": status,
+            "message_id": recipient.get("messageId"),
+            "response": response,
         }
          
 
     except Exception as e:
         logger.exception(e)
         return {
-
             "success": False,
-
             "status": "FAILED",
-
             "message_id": None,
-
             "error": str(e)
         }

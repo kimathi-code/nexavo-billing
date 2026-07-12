@@ -70,12 +70,35 @@ class PortalActivationOTP(models.Model):
         auto_now_add=True
     )
 
+    PURPOSE_CHOICES = [
+        (
+            "activation",
+            "Activation"
+        ),
+
+        (
+            "password_reset",
+            "Password Reset"
+        ),
+    ]
+
+
+    purpose = models.CharField(
+        max_length=30,
+        choices=PURPOSE_CHOICES,
+        default="activation"
+    )
+
     def has_expired(self):
         return timezone.now() > self.expires_at
 
 
     @classmethod
-    def generate(cls, client):
+    def generate(
+        cls,
+        client,
+        purpose="activation"
+    ):
         otp = str(
             random.randint(
                 100000,
@@ -86,6 +109,7 @@ class PortalActivationOTP(models.Model):
         return cls.objects.create(
             client=client,
             code=otp,
+            purpose=purpose,
             expires_at=timezone.now() + timedelta(minutes=10)
         )
 

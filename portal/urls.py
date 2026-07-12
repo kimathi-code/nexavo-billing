@@ -25,5 +25,16 @@ urlpatterns = [
         "activate/resend-code/",
         views.portal_activation_resend_code,
         name="portal_activation_resend_code"
-    )
+    ),
+    path(
+        "password-reset/",
+        views.portal_password_reset,
+        name="portal_password_reset"
+    ),
+    path(
+        "password-reset/restart/",
+        views.portal_password_reset_restart,
+        name="portal_password_reset_restart"
+    ),
+    
 ]

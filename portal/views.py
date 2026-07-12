@@ -15,12 +15,16 @@ from clients.models import Client
 
 from .forms import (
     PortalActivationRequestForm,
-    PortalActivationConfirmForm
+    PortalActivationConfirmForm,
+    PortalPasswordResetRequestForm,
+    PortalPasswordResetConfirmForm
 )
 
 from .portal_otp_service import (
     send_portal_activation_otp,
-    verify_portal_activation_otp
+    verify_portal_activation_otp,
+    send_portal_otp,
+    verify_portal_otp
 )
 
 from .portal_activation_service import (
@@ -264,4 +268,187 @@ def portal_dashboard(request):
     return render(
         request,
         "portal/portal_dashboard.html"
+    )
+
+# Portal password reset view
+def portal_password_reset(request):
+
+    client_id = request.session.get(
+        "password_reset_client_id"
+    )
+
+
+    # Stage 2: OTP confirmation + password change
+
+    if client_id:
+
+        form = PortalPasswordResetConfirmForm(
+            request.POST or None
+        )
+
+
+        if request.method == "POST" and form.is_valid():
+
+            try:
+
+                client = Client.objects.get(
+                    id=client_id
+                )
+
+
+                verify_portal_otp(
+                    client=client,
+                    code=form.cleaned_data["otp_code"],
+                    purpose="password_reset"
+                )
+
+
+                portal_account = client.portal_account
+
+
+                user = portal_account.user
+
+
+                user.set_password(
+                    form.cleaned_data["new_password"]
+                )
+
+
+                user.save()
+
+
+                request.session.pop(
+                    "password_reset_client_id",
+                    None
+                )
+
+
+                messages.success(
+                    request,
+                    "Password changed successfully. Please login."
+                )
+
+
+                return redirect(
+                    "portal_login"
+                )
+
+
+            except ValidationError as error:
+
+                error_msg = (
+                    error.messages[0]
+                    if hasattr(error, "messages")
+                    else str(error)
+                )
+
+
+                messages.error(
+                    request,
+                    error_msg
+                )
+
+
+            except Client.DoesNotExist:
+
+                request.session.pop(
+                    "password_reset_client_id",
+                    None
+                )
+
+
+                messages.error(
+                    request,
+                    "Session expired. Please restart password reset."
+                )
+
+
+                return redirect(
+                    "portal_password_reset"
+                )
+
+
+        return render(
+            request,
+            "portal/portal_password_reset.html",
+            {
+                "form": form,
+                "stage": "confirm"
+            }
+        )
+
+
+
+    # Stage 1: verify customer
+
+    form = PortalPasswordResetRequestForm(
+        request.POST or None
+    )
+
+
+    if request.method == "POST" and form.is_valid():
+
+        try:
+
+            client = Client.objects.get(
+                account_number=form.cleaned_data["account_number"],
+                phone=form.cleaned_data["phone"]
+            )
+
+
+            send_portal_otp(
+                client=client,
+                purpose="password_reset"
+            )
+
+
+            request.session[
+                "password_reset_client_id"
+            ] = client.id
+
+
+            messages.success(
+                request,
+                "Password reset code sent."
+            )
+
+
+            return redirect(
+                "portal_password_reset"
+            )
+
+
+        except Client.DoesNotExist:
+
+            messages.error(
+                request,
+                "Customer account not found."
+            )
+
+
+    return render(
+        request,
+        "portal/portal_password_reset.html",
+        {
+            "form": form,
+            "stage": "request"
+        }
+    )
+
+def portal_password_reset_restart(request):
+
+    request.session.pop(
+        "password_reset_client_id",
+        None
+    )
+
+
+    messages.info(
+        request,
+        "Password reset restarted. Please verify your account again."
+    )
+
+
+    return redirect(
+        "portal_password_reset"
     )
