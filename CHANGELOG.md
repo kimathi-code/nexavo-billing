@@ -54,4 +54,27 @@ This project follows semantic versioning.
 - Renamed `scripts/mikrotik/services.py` to `mikrotik_services.py` to avoid module name collisions.
 - Added `services/__init__.py` to make the package explicit.
 
+# Changelog
+
+## v0.3.1
+
+### Added
+- Customer portal dashboard service
+- Dashboard base template
+- Shared portal layout
+- Portal navigation bar
+- Bootstrap 5 integration
+- Custom portal stylesheet
+- Wallet summary
+- Subscription summary
+- Recent payments service
+
+### Improved
+- SMS service reliability
+- Dashboard architecture
+- Separation of business logic into services
+
+### Fixed
+- Duplicate PortalAccount lookup
+- Dashboard context organization
 Future releases will continue to be documented here.

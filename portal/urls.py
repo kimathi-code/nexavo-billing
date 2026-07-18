@@ -36,5 +36,9 @@ urlpatterns = [
         views.portal_password_reset_restart,
         name="portal_password_reset_restart"
     ),
-    
+    path(
+        "logout/",
+        views.portal_logout,
+        name="portal_logout"
+    ),
 ]

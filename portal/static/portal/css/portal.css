@@ -1,0 +1,112 @@
+:root{
+
+    --nexavo-primary:#00BFFF;
+
+    --nexavo-dark:#0A0F2C;
+
+    --nexavo-success:#39FF14;
+
+    --nexavo-light:#F8F9FA;
+
+    --nexavo-card:#FFFFFF;
+
+    --nexavo-text:#2C3E50;
+
+}
+
+body{
+
+    background:var(--nexavo-light);
+
+    color:var(--nexavo-text);
+
+    font-family:
+        "Segoe UI",
+        sans-serif;
+
+}
+.navbar{
+
+    background:var(--nexavo-dark)!important;
+
+}
+
+.navbar-brand{
+
+    font-weight:700;
+
+    color:white!important;
+
+    letter-spacing:1px;
+
+}
+
+.nav-link{
+
+    color:white!important;
+
+}
+
+.nav-link:hover{
+
+    color:var(--nexavo-primary)!important;
+
+}
+
+.card{
+
+    border:none;
+
+    border-radius:16px;
+
+    box-shadow:
+        0 8px 20px
+        rgba(0,0,0,.08);
+
+    transition:.25s;
+
+}
+
+.card:hover{
+
+    transform:translateY(-3px);
+
+}
+
+.btn-primary{
+
+    background:var(--nexavo-primary);
+
+    border:none;
+
+}
+
+.btn-primary:hover{
+
+    background:#00A7E6;
+
+}
+
+.dashboard-card{
+
+    min-height:150px;
+
+}
+
+.page-title{
+
+    font-weight:700;
+
+    color:var(--nexavo-dark);
+
+    margin-bottom:25px;
+
+}
+
+footer{
+
+    color:#777;
+
+    font-size:.9rem;
+
+}

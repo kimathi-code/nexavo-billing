@@ -1,7 +1,5 @@
 import logging
 
-from django.http import response
-
 import africastalking
 
 import os
@@ -67,7 +65,7 @@ def send_sms(
         )
 
         status = recipient.get("status")
-
+        # Return a structured response
         return {
             "success": status == "Success",
             "status": status,

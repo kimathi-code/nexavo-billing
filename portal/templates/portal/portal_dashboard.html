@@ -1,3 +1,255 @@
-<h1>Welcome to Nexavo Customer Portal</h1>
+{% extends "portal/base.html" %}
 
-<p>You are logged in successfully.</p>
+
+{% block title %}
+
+Dashboard
+
+{% endblock %}
+
+
+{% block content %}
+
+<h2>
+
+    Dashboard
+
+</h2>
+
+
+<p>
+
+    Welcome back, {{ client.name }}
+
+</p>
+
+
+<h3>
+
+    Account Summary
+
+</h3>
+
+<div>
+    <p>
+        <strong>Account Name:</strong>
+        {{ client.name }}
+    </p>
+
+    <p>
+
+        <strong>Account Number:</strong>
+        {{ client.account_number }} 
+        
+
+    </p>
+
+    <p>
+
+        <strong>Phone Number:</strong>
+
+        {{ client.phone }}
+
+    </p>
+
+    <div class="row g-4">
+
+        <div class="col-md-4">
+
+            <div class="card shadow-sm">
+
+                <div class="card-body">
+
+                    <h6 class="text-muted">
+
+                        Wallet Balance
+
+                    </h6>
+
+                    <h3>
+
+                        {{ summary.wallet_balance }}
+
+                    </h3>
+
+                </div>
+
+            </div>
+
+        </div>
+
+    </div>
+
+    <div class="row g-4">
+
+        <div class="col-md-4">
+
+            <div class="card shadow-sm">
+
+                <div class="card-body">
+
+                    <h6 class="text-muted">
+
+                        Connection Status
+
+                    </h6>
+
+                    <h3>
+
+                        {{ subscription.status }}
+
+                    </h3>
+
+                </div>
+
+            </div>
+
+        </div>
+
+    </div>
+    <div class="row g-4">
+
+        <div class="col-md-4">
+
+            <div class="card shadow-sm">
+
+                <div class="card-body">
+
+                    <h6 class="text-muted">
+
+                        Current Package
+
+                    </h6>
+
+                    <h3>
+
+                        {{ subscription.package }}
+
+                    </h3>
+
+                </div>
+
+            </div>
+
+        </div>
+
+    </div>
+    <div class="row g-4">
+
+        <div class="col-md-4">
+
+            <div class="card shadow-sm">
+
+                <div class="card-body">
+
+                    <h6 class="text-muted">
+
+                        Expiry Date
+
+                    </h6>
+
+                    <h3>
+
+                        {{ subscription.end_date }}
+
+                    </h3>
+
+                </div>
+
+            </div>
+
+        </div>
+
+    </div>
+    <div class="row g-4">
+
+        <div class="col-md-4">
+
+            <div class="card shadow-sm">
+
+                <div class="card-body">
+
+                    <h6 class="text-muted">
+
+                        Days Remaining
+
+                    </h6>
+
+                    <h3>
+
+                        {{ subscription.days_remaining }}
+
+                    </h3>
+
+                </div>
+
+            </div>
+
+        </div>
+
+    </div>
+
+</div> 
+
+<hr>
+
+
+<h3>
+
+    Quick Actions
+
+</h3>
+
+
+<button disabled>
+
+    Pay Now
+
+</button>
+
+
+<button disabled>
+
+    View Invoices
+
+</button>
+
+
+<button disabled>
+
+    Payment History
+
+</button>
+
+
+<button disabled>
+
+    Update Profile
+
+</button>
+
+
+<button disabled>
+
+    Support
+
+</button>
+
+
+<hr>
+
+
+<h3>
+
+    Notifications
+
+</h3>
+
+
+<p>
+
+    No notifications.
+
+</p>
+
+{% endblock %}

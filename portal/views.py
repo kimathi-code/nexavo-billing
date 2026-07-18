@@ -11,6 +11,10 @@ from django.contrib.auth import authenticate, login
 
 from django.contrib.auth.decorators import login_required
 
+from django.contrib.auth import logout
+
+from portal.models import PortalAccount
+
 from clients.models import Client
 
 from .forms import (
@@ -31,6 +35,10 @@ from .portal_activation_service import (
     activate_portal_account
 )
 
+from .portal_dashboard_service import (
+    get_dashboard_data
+)
+
 # Portal activation view
 def portal_activation_view(request):
 
@@ -38,14 +46,12 @@ def portal_activation_view(request):
         "activation_client_id"
     )
 
-
     # Stage 2: OTP verification + account creation
     if client_id:
 
         form = PortalActivationConfirmForm(
             request.POST or None
         )
-
 
         if request.method == "POST" and form.is_valid():
 
@@ -73,12 +79,10 @@ def portal_activation_view(request):
                     None
                 )
 
-
                 messages.success(
                     request,
                     "Portal activated successfully. Please log in."
                 )
-
 
                 return redirect(
                     "portal_login"
@@ -126,14 +130,11 @@ def portal_activation_view(request):
             }
         )
 
-
-
     # Stage 1: Account verification + send OTP
 
     form = PortalActivationRequestForm(
         request.POST or None
     )
-
 
     if request.method == "POST" and form.is_valid():
 
@@ -160,11 +161,9 @@ def portal_activation_view(request):
                 "Verification code sent to your phone."
             )
 
-
             return redirect(
                 "portal_activation"
             )
-
 
         except Client.DoesNotExist:
 
@@ -172,7 +171,6 @@ def portal_activation_view(request):
                 request,
                 "Customer account not found."
             )
-
 
     return render(
         request,
@@ -190,7 +188,6 @@ def portal_activation_resend_code(request):
         "activation_client_id"
     )
 
-
     if not client_id:
 
         messages.error(
@@ -202,24 +199,20 @@ def portal_activation_resend_code(request):
             "portal_activation"
         )
 
-
     try:
 
         client = Client.objects.get(
             id=client_id
         )
 
-
         send_portal_activation_otp(
             client
         )
-
 
         messages.success(
             request,
             "A new verification code has been sent."
         )
-
 
     except Client.DoesNotExist:
 
@@ -228,12 +221,10 @@ def portal_activation_resend_code(request):
             None
         )
 
-
         messages.error(
             request,
             "Session expired. Please restart activation."
         )
-
 
     return redirect(
         "portal_activation"
@@ -262,21 +253,12 @@ def portal_login(request):
         "portal/portal_login.html"
     )
 
-# Portal dashboard view
-@login_required
-def portal_dashboard(request):
-    return render(
-        request,
-        "portal/portal_dashboard.html"
-    )
-
 # Portal password reset view
 def portal_password_reset(request):
 
     client_id = request.session.get(
         "password_reset_client_id"
     )
-
 
     # Stage 2: OTP confirmation + password change
 
@@ -286,7 +268,6 @@ def portal_password_reset(request):
             request.POST or None
         )
 
-
         if request.method == "POST" and form.is_valid():
 
             try:
@@ -295,44 +276,35 @@ def portal_password_reset(request):
                     id=client_id
                 )
 
-
                 verify_portal_otp(
                     client=client,
                     code=form.cleaned_data["otp_code"],
                     purpose="password_reset"
                 )
 
-
                 portal_account = client.portal_account
 
-
                 user = portal_account.user
-
 
                 user.set_password(
                     form.cleaned_data["new_password"]
                 )
 
-
                 user.save()
-
 
                 request.session.pop(
                     "password_reset_client_id",
                     None
                 )
 
-
                 messages.success(
                     request,
                     "Password changed successfully. Please login."
                 )
 
-
                 return redirect(
                     "portal_login"
                 )
-
 
             except ValidationError as error:
 
@@ -342,12 +314,10 @@ def portal_password_reset(request):
                     else str(error)
                 )
 
-
                 messages.error(
                     request,
                     error_msg
                 )
-
 
             except Client.DoesNotExist:
 
@@ -356,17 +326,14 @@ def portal_password_reset(request):
                     None
                 )
 
-
                 messages.error(
                     request,
                     "Session expired. Please restart password reset."
                 )
 
-
                 return redirect(
                     "portal_password_reset"
                 )
-
 
         return render(
             request,
@@ -377,14 +344,11 @@ def portal_password_reset(request):
             }
         )
 
-
-
     # Stage 1: verify customer
 
     form = PortalPasswordResetRequestForm(
         request.POST or None
     )
-
 
     if request.method == "POST" and form.is_valid():
 
@@ -395,28 +359,23 @@ def portal_password_reset(request):
                 phone=form.cleaned_data["phone"]
             )
 
-
             send_portal_otp(
                 client=client,
                 purpose="password_reset"
             )
 
-
             request.session[
                 "password_reset_client_id"
             ] = client.id
-
 
             messages.success(
                 request,
                 "Password reset code sent."
             )
 
-
             return redirect(
                 "portal_password_reset"
             )
-
 
         except Client.DoesNotExist:
 
@@ -424,7 +383,6 @@ def portal_password_reset(request):
                 request,
                 "Customer account not found."
             )
-
 
     return render(
         request,
@@ -442,13 +400,54 @@ def portal_password_reset_restart(request):
         None
     )
 
-
     messages.info(
         request,
         "Password reset restarted. Please verify your account again."
     )
 
-
     return redirect(
         "portal_password_reset"
+    )
+
+# Portal dashboard view
+@login_required
+def portal_dashboard(request):
+
+    try:
+
+        context = get_dashboard_data(
+            request.user
+        )
+
+    except PortalAccount.DoesNotExist:
+
+        logout(request)
+
+        messages.error(
+            request,
+            "Your portal account could not be found."
+        )
+
+        return redirect(
+            "portal_login"
+        )
+
+    return render(
+        request,
+        "portal/portal_dashboard.html",
+        context
+    )
+
+# logout view
+def portal_logout(request):
+
+    logout(request)
+
+    messages.success(
+        request,
+        "You have been logged out successfully."
+    )
+
+    return redirect(
+        "portal_login"
     )
