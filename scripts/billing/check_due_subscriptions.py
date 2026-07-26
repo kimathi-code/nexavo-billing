@@ -1,7 +1,6 @@
 import os
 import sys
 import logging
-
 from datetime import date
 
 # DJANGO SETUP
@@ -15,14 +14,13 @@ os.environ.setdefault(
 import django
 django.setup()
 
-from django.db import transaction  # Imported transaction module
 
 from clients.models import (
     Subscription
 )
 
-from services.subscription_service import (
-    renew_subscription
+from services.billing_service import (
+    process_client_renewal
 )
 
 #INITIALIZE LOGGER
@@ -53,72 +51,15 @@ def process_due_subscriptions():
 
     for subscription in expired_subscriptions:
 
-        client = subscription.client
+        result = process_client_renewal(
+            subscription.client
+        )
 
-        package = subscription.package
-
-        # NO PACKAGE
-        if not package:
-
-            logger.warning(
-                f"No package assigned for {client.account_number}"
-            )
-
-            continue
-
-        # CHECK WALLET BALANCE
-        if client.wallet_balance < package.price:
-
-            logger.warning(
-                f"Account {client.account_number} "
-                f"has insufficient wallet balance. "
-                f"Wallet={client.wallet_balance}, "
-                f"Required={package.price}"
-            )
-
-            subscription.status = 'expired'
-
-            subscription.save()
-
-            continue
-        # ATOMIC TRANSACTION FOR EACH CLIENT RENEWAL
-        try:
-            # Capture the exact balance before deduction
-            wallet_before = client.wallet_balance
-
-            with transaction.atomic():
-                # DEDUCT WALLET
-                client.wallet_balance -= package.price
-                client.save()
-
-                # RENEW SUBSCRIPTION
-                renew_subscription(
-                    client=client,
-                    package=package,
-                    payment_amount=package.price
-                )
-
-            # Capture the exact balance after successful commit
-            wallet_after = client.wallet_balance
-
-            # Comprehensive Financial Log
-            logger.info(
-                f"Account: {client.account_number} | "
-                f"Wallet Before: {wallet_before} | "
-                f"Deducted: {package.price} | "
-                f"Wallet After: {wallet_after} | "
-                f"Status: SUCCESS"
-            )
-
-        except Exception:
-
-            logger.exception(
-                f"Atomic transaction failed for "
-                f"{client.account_number}"
-            )
-
-            continue       
-
+        logger.info(
+            f"Account: {subscription.client.account_number} | "
+            f"Renewed: {result['renewed']} | "
+            f"Message: {result['message']}"
+        )
 
 if __name__ == "__main__":
     try:
