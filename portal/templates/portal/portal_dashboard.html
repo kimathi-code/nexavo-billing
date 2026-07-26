@@ -246,10 +246,13 @@ Dashboard
 </h3>
 
 
-<p>
-
-    No notifications.
-
-</p>
+{% for notification in notifications %}
+    <p>
+        <strong>{{ notification.title }}</strong><br>
+        {{ notification.message }}
+    </p>
+{% empty %}
+    <p>No notifications.</p>
+{% endfor %}
 
 {% endblock %}

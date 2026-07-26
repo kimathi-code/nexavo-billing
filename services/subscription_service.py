@@ -8,9 +8,8 @@ from clients.models import (
     Package,
     MikroTikLog
 )
-
-from scripts.mikrotik.services import (
-    get_mikrotik_api,
+from scripts.mikrotik.connect import get_mikrotik_api
+from scripts.mikrotik.mikrotik_services import (
     enable_ppp_secret,
     disconnect_active_session
 )

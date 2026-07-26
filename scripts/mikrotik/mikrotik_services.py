@@ -68,3 +68,51 @@ def disconnect_active_session(username, api):
         return False
 
 
+#get router info
+def get_active_session(username, api):
+    """
+    Return active PPP session information.
+    """
+
+    logger.info(
+        f"Checking active session for user: {username}"
+    )
+
+    try:
+
+        ppp_active = api.get_resource("/ppp/active")
+
+        active = ppp_active.get(
+            name=username
+        )
+
+        if not active:
+
+            return None
+
+        session = active[0]
+
+        return {
+
+            "connected": True,
+
+            "status": "Connected",
+
+            "ip_address": session.get(
+                "address"
+            ),
+
+            "uptime": session.get(
+                "uptime"
+            ),
+
+        }
+
+    except Exception:
+
+        logger.exception(
+            f"Error checking session "
+            f"for {username}"
+        )
+
+        return None
