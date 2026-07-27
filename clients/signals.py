@@ -1,3 +1,4 @@
+import logging
 from django.db.models.signals import post_save
 from django.dispatch import receiver
 
@@ -10,7 +11,11 @@ from services.payment_notification_service import (
     build_payment_confirmation_message
 )
 
+from services.billing_service import (
+    process_client_renewal
+)
 
+logger = logging.getLogger("billing")
 
 @receiver(post_save, sender=Payment)
 def process_payment(
@@ -30,13 +35,22 @@ def process_payment(
 
     client.save()
 
+    # PROCESS AUTOMATIC RENEWAL
+    renewal_result = process_client_renewal(client)
+
+    logger.info(
+        f"Automatic renewal result for "
+        f"{client.account_number}: "
+        f"{renewal_result['message']}"
+    )
+
     message = (
         build_payment_confirmation_message(
             instance
         )
     )
 
-    result = send_sms(
+    sms_result = send_sms(
 
         client.phone,
 
@@ -55,15 +69,15 @@ def process_payment(
 
 	    phone_number=client.phone,
 
-        delivery_status=result.get(
+        delivery_status=sms_result.get(
             "status"
         ),
 
-        gateway_message_id=result.get(
+        gateway_message_id=sms_result.get(
             "message_id"
         ),
 
-        gateway_response=str(result)
+        gateway_response=str(sms_result)
     )
 
     # PAYMENT STATUS
