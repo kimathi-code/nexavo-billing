@@ -3,8 +3,11 @@ import logging
 
 from clients.models import (
     Subscription,
-    Payment,
     Invoice
+)
+
+from portal.services.payment_dashboard_service import (
+    get_recent_payments,
 )
 
 from scripts.mikrotik.connect import get_mikrotik_api
@@ -85,50 +88,6 @@ def get_wallet(client):
             f"KES {client.wallet_balance:,.2f}"
         )
     }
-
-
-def get_recent_payments(
-    client,
-    limit=5
-):
-    """
-    Return recent customer payments.
-    """
-
-    payments = (
-        Payment.objects
-        .filter(
-            client=client,
-            status="completed"
-        )
-        .order_by(
-            "-created_at"
-        )[:limit]
-    )
-
-    return [
-
-        {
-
-            "date": payment.created_at,
-
-            "amount": payment.amount,
-
-            "formatted_amount": (
-                f"KES {payment.amount:,.2f}"
-            ),
-
-            "receipt": payment.transaction_code,
-
-            "method": payment.get_payment_method_display(),
-
-            "status": payment.status.title(),
-
-        }
-
-        for payment in payments
-
-    ]
 
 
 def get_recent_invoices(
