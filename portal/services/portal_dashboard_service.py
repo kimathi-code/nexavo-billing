@@ -1,12 +1,17 @@
-from portal.models import PortalAccount
 from datetime import date
+import logging
+
 from clients.models import (
     Subscription,
     Payment,
     Invoice
 )
+
 from scripts.mikrotik.connect import get_mikrotik_api
 from scripts.mikrotik.mikrotik_services import get_active_session
+
+# initialize logger
+logger = logging.getLogger(__name__)
 
 #******DATA LOADING FUNCTIONS******
 def get_subscription(client):
@@ -270,7 +275,8 @@ def get_router_status(client):
     except Exception:
 
         logger.exception(
-            "Failed to retrieve router status."
+            "Failed to retrieve router status for client %s",
+            client.account_number,
         )
 
         return {
@@ -294,28 +300,15 @@ def get_router_status(client):
 
 #******DATA BUILDERS FUNCTIONS******
 
-def calculate_account_summary(
-    client,
-    subscription,
-    wallet
-):
+def calculate_account_summary(client, wallet):
     """
-    Build summary values for dashboard cards.
+    Build account summary values for the dashboard.
     """
-
     return {
-
+        "account_name": client.name,
         "account_number": client.account_number,
-
-        "wallet_balance": wallet["formatted_balance"],
-
         "phone": client.phone,
-
-        "subscription_status": (
-            subscription["status"]
-            if subscription
-            else "No Active Subscription"
-        )
+        "wallet_balance": wallet["formatted_balance"],
     }
 
 def get_notifications(
@@ -474,7 +467,6 @@ def get_dashboard_data(user):
 
     summary = calculate_account_summary(
         client,
-        subscription,
         wallet
     )
 
@@ -496,5 +488,5 @@ def get_dashboard_data(user):
 
         "notifications": notifications,
 
-        "summary": summary,
+        "account_summary": summary,
     }

@@ -1,258 +1,282 @@
-{% extends "portal/base.html" %}
+{% extends 'portal/base.html' %}
+{% load static %}
 
-
-{% block title %}
-
-Dashboard
-
-{% endblock %}
-
+{% block title %}Dashboard | Nexavo Portal{% endblock %}
 
 {% block content %}
+<!-- Welcome & Quick Header -->
+<div class="d-flex flex-column flex-md-row justify-content-between align-items-md-center mb-4 gap-3">
+    <div>
+        <h2 class="page-title mb-1">Welcome back, {{ account_summary.account_name }}</h2>
+        <p class="text-muted mb-0">Account #: <strong>{{ account_summary.account_number }}</strong> | Phone: {{ account_summary.phone }}</p>
+    </div>
+    <div class="d-flex gap-2">
+        <button class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#payModal">
+            <i class="bi bi-lightning-charge-fill me-1"></i> Quick Renewal / Pay
+        </button>
+    </div>
+</div>
 
-<h2>
-
-    Dashboard
-
-</h2>
-
-
-<p>
-
-    Welcome back, {{ client.name }}
-
-</p>
-
-
-<h3>
-
-    Account Summary
-
-</h3>
-
-<div>
-    <p>
-        <strong>Account Name:</strong>
-        {{ client.name }}
-    </p>
-
-    <p>
-
-        <strong>Account Number:</strong>
-        {{ client.account_number }} 
-        
-
-    </p>
-
-    <p>
-
-        <strong>Phone Number:</strong>
-
-        {{ client.phone }}
-
-    </p>
-
-    <div class="row g-4">
-
-        <div class="col-md-4">
-
-            <div class="card shadow-sm">
-
-                <div class="card-body">
-
-                    <h6 class="text-muted">
-
-                        Wallet Balance
-
-                    </h6>
-
-                    <h3>
-
-                        {{ summary.wallet_balance }}
-
-                    </h3>
-
-                </div>
-
+<!-- Dynamic Notifications Banner -->
+{% if notifications %}
+<div class="row mb-4">
+    <div class="col-12">
+        {% for note in notifications %}
+        <div class="alert alert-{{ note.type }} alert-dismissible fade show border-0 shadow-sm rounded-4 mb-2 d-flex align-items-center" role="alert">
+            <i class="bi 
+                {% if note.type == 'danger' %}bi-exclamation-octagon-fill
+                {% elif note.type == 'warning' %}bi-exclamation-triangle-fill
+                {% elif note.type == 'success' %}bi-check-circle-fill
+                {% else %}bi-info-circle-fill{% endif %} me-3 fs-4"></i>
+            <div>
+                <strong>{{ note.title }}:</strong> {{ note.message }}
             </div>
-
+            <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
         </div>
+        {% endfor %}
+    </div>
+</div>
+{% endif %}
 
+<!-- Top Stats Grid -->
+<div class="row g-3 mb-4">
+    <!-- Subscription Info -->
+    <div class="col-12 col-md-6 col-lg-3">
+        <div class="card h-100 stat-card p-3">
+            <i class="bi bi-wifi stat-icon"></i>
+            <small class="text-muted fw-semibold text-uppercase">Active Package</small>
+            {% if subscription %}
+                <h4 class="fw-bold mt-2 mb-1 text-truncate">{{ subscription.package }}</h4>
+                <div class="d-flex align-items-center gap-2">
+                    <span class="badge badge-soft-info">{{ subscription.speed|default:"Standard" }}</span>
+                    <small class="text-muted">
+                        {% if subscription.days_remaining is not None %}
+                            {{ subscription.days_remaining }} days left
+                        {% endif %}
+                    </small>
+                </div>
+            {% else %}
+                <h4 class="fw-bold mt-2 mb-1 text-muted">No Subscription</h4>
+                <span class="badge badge-soft-danger">Inactive</span>
+            {% endif %}
+        </div>
     </div>
 
-    <div class="row g-4">
-
-        <div class="col-md-4">
-
-            <div class="card shadow-sm">
-
-                <div class="card-body">
-
-                    <h6 class="text-muted">
-
-                        Connection Status
-
-                    </h6>
-
-                    <h3>
-
-                        {{ subscription.status }}
-
-                    </h3>
-
-                </div>
-
-            </div>
-
+    <!-- Wallet Balance -->
+    <div class="col-12 col-md-6 col-lg-3">
+        <div class="card h-100 stat-card p-3">
+            <i class="bi bi-wallet2 stat-icon"></i>
+            <small class="text-muted fw-semibold text-uppercase">Wallet Balance</small>
+            <h4 class="fw-bold mt-2 mb-1" style="color: var(--nexavo-dark);">{{ wallet.formatted_balance }}</h4>
+            <small class="text-muted">Available for auto-renewals</small>
         </div>
-
-    </div>
-    <div class="row g-4">
-
-        <div class="col-md-4">
-
-            <div class="card shadow-sm">
-
-                <div class="card-body">
-
-                    <h6 class="text-muted">
-
-                        Current Package
-
-                    </h6>
-
-                    <h3>
-
-                        {{ subscription.package }}
-
-                    </h3>
-
-                </div>
-
-            </div>
-
-        </div>
-
-    </div>
-    <div class="row g-4">
-
-        <div class="col-md-4">
-
-            <div class="card shadow-sm">
-
-                <div class="card-body">
-
-                    <h6 class="text-muted">
-
-                        Expiry Date
-
-                    </h6>
-
-                    <h3>
-
-                        {{ subscription.end_date }}
-
-                    </h3>
-
-                </div>
-
-            </div>
-
-        </div>
-
-    </div>
-    <div class="row g-4">
-
-        <div class="col-md-4">
-
-            <div class="card shadow-sm">
-
-                <div class="card-body">
-
-                    <h6 class="text-muted">
-
-                        Days Remaining
-
-                    </h6>
-
-                    <h3>
-
-                        {{ subscription.days_remaining }}
-
-                    </h3>
-
-                </div>
-
-            </div>
-
-        </div>
-
     </div>
 
-</div> 
+    <!-- Connection Status -->
+    <div class="col-12 col-md-6 col-lg-3">
+        <div class="card h-100 stat-card p-3">
+            <i class="bi bi-router stat-icon"></i>
+            <small class="text-muted fw-semibold text-uppercase">Router Connection</small>
+            <div class="d-flex align-items-center mt-2 mb-1">
+                <span class="status-indicator {% if router.connected %}status-online{% else %}status-offline{% endif %}"></span>
+                <h4 class="fw-bold mb-0 fs-5">{{ router.status }}</h4>
+            </div>
+            <small class="text-muted">IP: {{ router.ip_address|default:"N/A" }} {% if router.uptime %}| Uptime: {{ router.uptime }}{% endif %}</small>
+        </div>
+    </div>
 
-<hr>
+    <!-- Account Details -->
+    <div class="col-12 col-md-6 col-lg-3">
+        <div class="card h-100 stat-card p-3">
+            <i class="bi bi-person-badge stat-icon"></i>
+            <small class="text-muted fw-semibold text-uppercase">Subscription Status</small>
+            <h4 class="fw-bold mt-2 mb-1">
+                {% if subscription and subscription.is_active %}
+                    <span class="text-success"><i class="bi bi-shield-check"></i> Active</span>
+                {% else %}
+                    <span class="text-danger"><i class="bi bi-shield-x"></i> Suspended</span>
+                {% endif %}
+            </h4>
+            <small class="text-muted">Renews: {{ subscription.end_date|default:"N/A" }}</small>
+        </div>
+    </div>
+</div>
 
+<!-- Main Content Grid -->
+<div class="row g-4">
+    <!-- Left Column: Invoices & Payments -->
+    <div class="col-12 col-lg-8">
+        <!-- Recent Invoices -->
+        <div class="card mb-4">
+            <div class="card-header bg-transparent border-0 pt-4 px-4 d-flex justify-content-between align-items-center">
+                <h5 class="fw-bold mb-0"><i class="bi bi-receipt me-2 text-primary"></i>Recent Invoices</h5>
+                <a href="#" class="btn btn-sm btn-light rounded-pill">View All</a>
+            </div>
+            <div class="card-body px-0 pb-2">
+                <div class="table-responsive">
+                    <table class="table align-middle table-hover mb-0">
+                        <thead class="table-light">
+                            <tr>
+                                <th class="ps-4">Invoice #</th>
+                                <th>Due Date</th>
+                                <th>Amount</th>
+                                <th>Balance</th>
+                                <th>Status</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for inv in invoices %}
+                            <tr>
+                                <td class="ps-4 fw-bold text-dark">{{ inv.invoice_number }}</td>
+                                <td>
+                                    <div>{{ inv.due_date }}</div>
+                                    <small class="{% if inv.is_overdue %}text-danger{% else %}text-muted{% endif %}" style="font-size: 0.75rem;">
+                                        {{ inv.due_message }}
+                                    </small>
+                                </td>
+                                <td>{{ inv.formatted_amount }}</td>
+                                <td class="fw-bold">{{ inv.formatted_balance_due }}</td>
+                                <td>
+                                    {% if inv.status|lower == 'paid' %}
+                                        <span class="badge badge-soft-success">Paid</span>
+                                    {% elif inv.is_overdue %}
+                                        <span class="badge badge-soft-danger">Overdue</span>
+                                    {% else %}
+                                        <span class="badge badge-soft-warning">{{ inv.status }}</span>
+                                    {% endif %}
+                                </td>
+                            </tr>
+                            {% empty %}
+                            <tr>
+                                <td colspan="5" class="text-center py-4 text-muted">No invoice records found.</td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
 
-<h3>
+        <!-- Recent Transactions -->
+        <div class="card">
+            <div class="card-header bg-transparent border-0 pt-4 px-4 d-flex justify-content-between align-items-center">
+                <h5 class="fw-bold mb-0"><i class="bi bi-clock-history me-2 text-primary"></i>Payment History</h5>
+                <a href="#" class="btn btn-sm btn-light rounded-pill">View All</a>
+            </div>
+            <div class="card-body px-0 pb-2">
+                <div class="table-responsive">
+                    <table class="table align-middle table-hover mb-0">
+                        <thead class="table-light">
+                            <tr>
+                                <th class="ps-4">Receipt</th>
+                                <th>Date</th>
+                                <th>Method</th>
+                                <th>Amount</th>
+                                <th>Status</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for pay in payments %}
+                            <tr>
+                                <td class="ps-4 font-monospace fw-bold">{{ pay.receipt }}</td>
+                                <td>{{ pay.date|date:"M d, Y H:i" }}</td>
+                                <td><span class="badge bg-light text-dark border">{{ pay.method }}</span></td>
+                                <td class="fw-bold text-dark">{{ pay.formatted_amount }}</td>
+                                <td><span class="badge badge-soft-success">{{ pay.status }}</span></td>
+                            </tr>
+                            {% empty %}
+                            <tr>
+                                <td colspan="5" class="text-center py-4 text-muted">No recent payment history found.</td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
 
-    Quick Actions
+    <!-- Right Column: Quick Pay Box & Connection Summary -->
+    <div class="col-12 col-lg-4">
+        <!-- Quick Pay Card -->
+        <div class="card text-white mb-4" style="background: linear-gradient(135deg, var(--nexavo-dark) 0%, #1a2352 100%);">
+            <div class="card-body p-4">
+                <div class="d-flex justify-content-between align-items-center mb-3">
+                    <h5 class="fw-bold mb-0">M-Pesa Express</h5>
+                    <i class="bi bi-phone fs-3 text-info"></i>
+                </div>
+                <p class="text-white-50 small mb-3">Top up your wallet or renew your internet access instantly.</p>
+                <div class="bg-white bg-opacity-10 rounded-3 p-3 mb-3">
+                    <small class="d-block text-white-50">Account Number</small>
+                    <div class="d-flex justify-content-between align-items-center">
+                        <span class="fw-bold fs-5" id="accNumber">{{ account_summary.account_number }}</span>
+                        <button class="btn btn-sm btn-link text-info p-0" onclick="copyAccount()"><i class="bi bi-copy"></i> Copy</button>
+                    </div>
+                </div>
+                <button class="btn btn-primary w-100 py-2 fw-bold" data-bs-toggle="modal" data-bs-target="#payModal">
+                    Make Payment
+                </button>
+            </div>
+        </div>
 
-</h3>
+        <!-- Connection Details Card -->
+        <div class="card">
+            <div class="card-header bg-transparent border-0 pt-4 px-4">
+                <h5 class="fw-bold mb-0"><i class="bi bi-gear me-2 text-primary"></i>Connection Info</h5>
+            </div>
+            <div class="card-body px-4">
+                <ul class="list-group list-group-flush">
+                    <li class="list-group-item px-0 d-flex justify-content-between align-items-center">
+                        <span class="text-muted">Package Speed</span>
+                        <span class="fw-bold">{{ subscription.speed|default:"N/A" }}</span>
+                    </li>
+                    <li class="list-group-item px-0 d-flex justify-content-between align-items-center">
+                        <span class="text-muted">Assigned IP</span>
+                        <span class="font-monospace fw-semibold">{{ router.ip_address|default:"Offline" }}</span>
+                    </li>
+                    <li class="list-group-item px-0 d-flex justify-content-between align-items-center">
+                        <span class="text-muted">Start Date</span>
+                        <span>{{ subscription.start_date|default:"N/A" }}</span>
+                    </li>
+                    <li class="list-group-item px-0 d-flex justify-content-between align-items-center">
+                        <span class="text-muted">End Date</span>
+                        <span>{{ subscription.end_date|default:"N/A" }}</span>
+                    </li>
+                </ul>
+            </div>
+        </div>
+    </div>
+</div>
 
+<!-- Modal Placeholder for Pay Action -->
+<div class="modal fade" id="payModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content border-0 rounded-4">
+            <div class="modal-header border-0">
+                <h5 class="modal-title fw-bold">Initiate Payment</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body px-4 pb-4">
+                <p class="text-muted small mb-3">An M-Pesa STK push prompt will be sent to your registered phone number (<strong>{{ account_summary.phone }}</strong>).</p>
+                <form>
+                    <div class="mb-3">
+                        <label class="form-label fw-semibold">Amount (KES)</label>
+                        <input type="number" class="form-control form-control-lg" value="{{ subscription.amount|default:'' }}" placeholder="Enter amount">
+                    </div>
+                    <button type="button" class="btn btn-primary w-100 py-2 fw-bold" onclick="alert('STK Push Triggered')">Send Payment Prompt</button>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
 
-<button disabled>
-
-    Pay Now
-
-</button>
-
-
-<button disabled>
-
-    View Invoices
-
-</button>
-
-
-<button disabled>
-
-    Payment History
-
-</button>
-
-
-<button disabled>
-
-    Update Profile
-
-</button>
-
-
-<button disabled>
-
-    Support
-
-</button>
-
-
-<hr>
-
-
-<h3>
-
-    Notifications
-
-</h3>
-
-
-{% for notification in notifications %}
-    <p>
-        <strong>{{ notification.title }}</strong><br>
-        {{ notification.message }}
-    </p>
-{% empty %}
-    <p>No notifications.</p>
-{% endfor %}
-
+{% block extra_js %}
+<script>
+function copyAccount() {
+    const acc = document.getElementById("accNumber").innerText;
+    navigator.clipboard.writeText(acc);
+    alert("Account number " + acc + " copied to clipboard!");
+}
+</script>
 {% endblock %}

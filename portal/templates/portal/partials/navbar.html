@@ -1,92 +1,50 @@
+{% load static %}
 {% if request.user.is_authenticated %}
-
-<nav class="navbar navbar-expand-lg navbar-dark bg-primary rounded mb-4">
-
-    <div class="container-fluid">
-
-        <a
-            class="navbar-brand"
-            href="{% url 'portal_dashboard' %}"
-        >
-            Nexavo Portal
+<nav class="navbar navbar-expand-lg navbar-dark sticky-top mb-4">
+    <div class="container">
+        <a class="navbar-brand" href="{% url 'portal_dashboard' %}">
+            <img src="{% static 'portal/img/nxv_logo.png' %}" alt="Nexavo" height="32" class="d-inline-block align-text-top me-1" onerror="this.style.display='none'">
+            <span>Nexavo<span style="color: var(--nexavo-primary);">Portal</span></span>
         </a>
 
-        <button
-            class="navbar-toggler"
-            type="button"
-            data-bs-toggle="collapse"
-            data-bs-target="#portalNavbar">
-
+        <button class="navbar-toggler border-0" type="button" data-bs-toggle="collapse" data-bs-target="#portalNavbar">
             <span class="navbar-toggler-icon"></span>
-
         </button>
 
-        <div
-            class="collapse navbar-collapse"
-            id="portalNavbar">
-
-            <ul class="navbar-nav me-auto">
-
+        <div class="collapse navbar-collapse" id="portalNavbar">
+            <ul class="navbar-nav me-auto ms-lg-4">
                 <li class="nav-item">
-
-                    <a
-                        class="nav-link"
-                        href="{% url 'portal_dashboard' %}">
-                        Dashboard
+                    <a class="nav-link active" href="{% url 'portal_dashboard' %}">
+                        <i class="bi bi-grid-1x2-fill me-1"></i> Dashboard
                     </a>
-
                 </li>
-
                 <li class="nav-item">
-
-                    <a
-                        class="nav-link"
-                        href="#">
-                        Payments
+                    <a class="nav-link" href="#">
+                        <i class="bi bi-wallet2 me-1"></i> Payments
                     </a>
-
                 </li>
-
                 <li class="nav-item">
-
-                    <a
-                        class="nav-link"
-                        href="#">
-                        Invoices
+                    <a class="nav-link" href="#">
+                        <i class="bi bi-file-earmark-text me-1"></i> Invoices
                     </a>
-
                 </li>
-
                 <li class="nav-item">
-
-                    <a
-                        class="nav-link"
-                        href="#">
-                        Support
+                    <a class="nav-link" href="#">
+                        <i class="bi bi-headset me-1"></i> Support
                     </a>
-
                 </li>
-
             </ul>
 
-            <span class="navbar-text me-3">
-
-                {{ request.user.username }}
-
-            </span>
-
-            <a
-                href="{% url 'portal_logout' %}"
-                class="btn btn-outline-light btn-sm">
-
-                Logout
-
-            </a>
-
+            <div class="d-flex align-items-center gap-3 mt-3 mt-lg-0">
+                <div class="text-light text-end d-none d-lg-block">
+                    <div class="fw-bold fs-7">{{ request.user.username }}</div>
+                    <small class="text-muted" style="font-size: 0.75rem;">Connected</small>
+                </div>
+                <a href="{% url 'portal_logout' %}" class="btn btn-outline-light btn-sm rounded-pill px-3">
+                    <i class="bi bi-box-arrow-right me-1"></i> Logout
+                </a>
+            </div>
         </div>
-
     </div>
-
 </nav>
-
 {% endif %}
