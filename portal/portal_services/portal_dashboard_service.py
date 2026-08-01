@@ -6,7 +6,7 @@ from clients.models import (
     Invoice
 )
 
-from portal.services.payment_dashboard_service import (
+from .payment_dashboard_service import (
     get_recent_payments,
 )
 

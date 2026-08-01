@@ -46,3 +46,20 @@ class PortalPasswordResetConfirmForm(forms.Form):
     new_password = forms.CharField(
         widget=forms.PasswordInput
     )
+
+    # dashboard payment modal form
+class MpesaPaymentForm(forms.Form):
+
+    account_number = forms.CharField(
+        max_length=20,
+    )
+
+    phone = forms.CharField(
+        max_length=15,
+    )
+
+    amount = forms.DecimalField(
+        min_value=1,
+        decimal_places=2,
+        max_digits=10,
+    )

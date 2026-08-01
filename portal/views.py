@@ -24,18 +24,18 @@ from .forms import (
     PortalPasswordResetConfirmForm
 )
 
-from .portal_otp_service import (
+from portal.portal_services.portal_otp_service import (
     send_portal_activation_otp,
     verify_portal_activation_otp,
     send_portal_otp,
     verify_portal_otp
 )
 
-from .portal_activation_service import (
+from portal.portal_services.portal_activation_service import (
     activate_portal_account
 )
 
-from .portal_dashboard_service import (
+from portal.portal_services.portal_dashboard_service import (
     get_dashboard_data
 )
 
