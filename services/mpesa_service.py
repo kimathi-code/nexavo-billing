@@ -91,14 +91,11 @@ class MpesaService:
 
         client,
 
-        amount
+        amount,
+
+        override_phone=None
 
     ):
-        logger.info(
-            f"Initiating STK Push | "
-            f"Account: {client.account_number} | "
-            f"Amount: {amount}"
-        )
 
         timestamp = datetime.now().strftime(
             "%Y%m%d%H%M%S"
@@ -123,7 +120,25 @@ class MpesaService:
         }
 
         # Convert stored phone number into Daraja format.
-        phone = self.format_phone_number(client.phone)
+        # Use override phone if provided, otherwise use the client's stored phone number.
+        payment_phone = (
+            override_phone
+            or client.phone
+        )
+
+        logger.info(
+            "Initiating STK Push | "
+            "Account: %s | "
+            "Amount: %s | "
+            "Phone: %s",
+            client.account_number,
+            amount,
+            payment_phone,
+        )
+
+        phone = self.format_phone_number(
+            payment_phone
+        )
 
         payload = {
 
@@ -154,7 +169,8 @@ class MpesaService:
         # POST request
         try:
             logger.info(
-                f"STK Payload: {payload}"
+                "STK Payload: %s",
+                payload
             )
             response = requests.post(
                 "https://sandbox.safaricom.co.ke/mpesa/stkpush/v1/processrequest",
@@ -177,7 +193,8 @@ class MpesaService:
                 error_response = response.text
 
             logger.error(
-                f"Daraja Error Response: {error_response}"
+                "Daraja Error Response: %s",
+                error_response
             )
 
             return {
@@ -195,7 +212,8 @@ class MpesaService:
         if response_code == "0":
 
             logger.info(
-                f"Daraja Response: {response_data}"
+                "Daraja Response: %s",
+                response_data
             )
 
             # create the pending database record
@@ -203,7 +221,7 @@ class MpesaService:
                 merchant_request_id=response_data.get("MerchantRequestID"),
                 checkout_request_id=response_data.get("CheckoutRequestID"),
                 account_reference=client.account_number,
-                phone_number=client.phone,
+                phone_number=payment_phone,
                 amount=amount,
                 response_code=response_data.get("ResponseCode"),
                 response_description=response_data.get("ResponseDescription"),
@@ -213,21 +231,24 @@ class MpesaService:
 
             return {
                 "success": True,
-                "response": response_data
+                "response": response_data,
+                "stk_request": stk_request,
             }
         else:
             # Safaricom hit back with an API level error code 
             logger.warning(
-                f"STK Push Rejected by Safaricom API | " 
-                f"Code: {response_code} | "
-                f"Desc: {response_desc}"
+                "STK Push rejected by Safaricom API | " 
+                "Code: %s | "
+                "Description: %s",
+                response_code,
+                response_desc
             )
 
             stk_request = StkPushRequest.objects.create(
                 merchant_request_id=response_data.get("MerchantRequestID"),
                 checkout_request_id=checkout_id,
                 account_reference=client.account_number,
-                phone_number=client.phone,
+                phone_number=payment_phone,
                 amount=amount,
                 response_code=response_code,
                 response_description=response_desc,

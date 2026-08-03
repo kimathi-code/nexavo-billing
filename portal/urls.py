@@ -37,6 +37,11 @@ urlpatterns = [
         name="portal_password_reset_restart"
     ),
     path(
+        "payments/mpesa/",
+        views.initiate_mpesa_payment_view,
+        name="initiate_mpesa_payment",
+    ),
+    path(
         "logout/",
         views.portal_logout,
         name="portal_logout"

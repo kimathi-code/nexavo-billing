@@ -39,6 +39,15 @@ from portal.portal_services.portal_dashboard_service import (
     get_dashboard_data
 )
 
+from portal.portal_services.payment_dashboard_service import (
+    validate_payment_request,
+    validate_payment_business_rules,
+    initiate_mpesa_payment,
+)
+#import logging and initialize logger
+import logging
+logger = logging.getLogger(__name__)
+
 # Portal activation view
 def portal_activation_view(request):
 
@@ -436,6 +445,158 @@ def portal_dashboard(request):
         request,
         "portal/portal_dashboard.html",
         context
+    )
+
+#portal dashboard payment view
+@login_required
+def initiate_mpesa_payment_view(request):
+    """
+    Initiate an M-Pesa STK Push from the
+    customer portal.
+    """
+    logger.info(
+        "Portal payment request received from %s.",
+        request.user.username,
+    )
+
+    if request.method != "POST":
+
+        messages.error(
+            request,
+            "Invalid payment request."
+        )
+
+        return redirect(
+            "portal_dashboard"
+        )
+
+    account_number = (
+        request.POST.get(
+            "account_number"
+        )
+    )
+
+    amount = (
+        request.POST.get(
+            "amount"
+        )
+    )
+
+    validation = validate_payment_request(
+        account_number,
+        amount,
+    )
+
+    if not validation["success"]:
+
+        logger.warning(
+            "Payment validation failed: %s",
+            validation["message"],
+        )
+
+        messages.error(
+            request,
+            validation["message"],
+        )
+
+        return redirect(
+            "portal_dashboard"
+        )
+    
+    # ownership check: ensure the logged-in user is paying for their own account
+    logged_in_client = (
+        request.user.portal_account.client
+    )
+
+    if (
+        account_number
+        != logged_in_client.account_number
+    ):
+
+        messages.error(
+
+            request,
+
+            (
+                "You are not allowed to "
+                "pay for another account."
+            ),
+
+        )
+        logger.warning(
+            "Portal payment denied. "
+            "User attempted to pay "
+            "account %s.",
+            account_number,
+        )
+        return redirect(
+            "portal_dashboard"
+        )
+
+    logger.info(
+        "Portal payment request accepted "
+        "for account %s.",
+        account_number,
+    ) 
+    
+    business_validation = (
+        validate_payment_business_rules(
+            validation["client"]
+        )
+    )
+
+    if not business_validation["success"]:
+        
+        logger.warning(
+            "Payment business validation failed: %s",
+            business_validation["message"],
+        )
+
+        messages.error(
+            request,
+            business_validation["message"],
+        )
+
+        return redirect(
+            "portal_dashboard"
+        )
+
+    response = initiate_mpesa_payment(
+
+        validation["client"],
+
+        validation["amount"],
+
+    )
+
+    if response.get("success"):
+
+        messages.success(
+
+            request,
+
+            (
+                "STK Push sent successfully. "
+                "Please check your phone."
+            ),
+
+        )
+
+    else:
+
+        messages.error(
+
+            request,
+
+            response.get(
+                "error",
+                "Unable to initiate payment.",
+            ),
+
+        )
+
+    return redirect(
+        "portal_dashboard"
     )
 
 # logout view
