@@ -1,7 +1,29 @@
 from datetime import date, timedelta
 
-from clients.models import Subscription
+from clients.models import Subscription, Invoice
 
+from services.invoice_service import (
+    calculate_required_top_up,
+)
+# helper functions to get relevant invoices
+def get_notification_invoice(subscription):
+    """
+    Return the pending invoice associated with
+    the subscription.
+    """
+
+    return (
+        Invoice.objects
+        .filter(
+            subscription=subscription,
+            status="pending",
+        )
+        .order_by(
+            "due_date",
+            "created_at",
+        )
+        .first()
+    )
 
 def get_expiring_subscriptions(days=7):
 
@@ -35,67 +57,80 @@ def get_suspended_subscriptions():
 
 #EXPIRING MESSAGE BUILDER
 def build_expiring_message(subscription):
+    """
+    Build an expiry notification using the
+    subscription's pending invoice.
+    """
 
-    package_price = (
-        subscription.package.price
-        if subscription.package
-        else 0
+    invoice = get_notification_invoice(
+        subscription
     )
 
     wallet_balance = (
         subscription.client.wallet_balance
     )
 
-    top_up_required = (
-        package_price - wallet_balance
-    )
-
-    if top_up_required < 0:
-
-        top_up_required = 0
-
     expiry_date = (
         subscription.end_date.strftime(
             "%d %b %Y"
         )
+    )
+
+    # No pending invoice found.
+    if not invoice:
+
+        return (
+            f"Dear {subscription.client.name}, "
+            f"your internet expires on {expiry_date}. "
+            f"Please ensure your wallet has sufficient "
+            f"funds for automatic renewal. Nexavo."
+        )
+
+    top_up_required = calculate_required_top_up(
+        invoice,
+        wallet_balance,
     )
 
     # CUSTOMER ALREADY HAS ENOUGH FUNDS
     if top_up_required == 0:
 
         return (
-            f"Dear {subscription.client.name}, your internet expires on {expiry_date}. "
-            f"Nexavo Acc. Bal: KES {wallet_balance:.2f}. "
+            f"Dear {subscription.client.name}, "
+            f"your internet expires on {expiry_date}. "
+            f"Nexavo Acc. Bal: "
+            f"KES {wallet_balance:.2f}. "
             f"Sufficient for auto-renewal. "
             f"Thank you from Nexavo."
         )
 
     # CUSTOMER NEEDS TO TOP UP
     return (
-        f"Dear {subscription.client.name}, your internet expires on {expiry_date}. "
-        f"To avoid disconnection, pay KES {top_up_required:.2f} via "
-        f"Paybill 5489004, Acc: {subscription.client.account_number}. Nexavo."
+        f"Dear {subscription.client.name}, "
+        f"your internet expires on {expiry_date}. "
+        f"To avoid disconnection, pay "
+        f"KES {top_up_required:.2f} via "
+        f"Paybill 5489004, "
+        f"Acc: {subscription.client.account_number}. "
+        f"Nexavo."
     )
 
 #EXPIRED MESSAGE BUILDER
 def build_expired_message(subscription):
+    """
+    Build an expired subscription notification
+    using the subscription's invoice.
+    """
 
-    package_price = (
-        subscription.package.price
-        if subscription.package
-        else 0
+    invoice = (
+        Invoice.objects
+        .filter(
+            subscription=subscription,
+        )
+        .order_by(
+            "-created_at",
+        )
+        .first()
     )
-
-    wallet = (
-        subscription.client.wallet_balance
-    )
-
-    balance_due = (
-        package_price - wallet
-    )
-
-    if balance_due < 0:
-        balance_due = 0
 
     expiry_date = (
         subscription.end_date.strftime(
@@ -103,35 +138,73 @@ def build_expired_message(subscription):
         )
     )
 
-    return (
-        f"Dear {subscription.client.name}, your internet expired on {expiry_date}. "
-        f"Pay KES {balance_due:.2f} via Paybill 5489004, Acc: {subscription.client.account_number} "
-        f"to reactivate. Nexavo."
-    )
+    if not invoice:
 
-#SUSPENDED MESSAGE BUILDER
-def build_suspended_message(subscription):
-
-    package_price = (
-        subscription.package.price
-        if subscription.package
-        else 0
-    )
+        return (
+            f"Dear {subscription.client.name}, "
+            f"your internet expired on {expiry_date}. "
+            f"Please contact Nexavo for reactivation."
+        )
 
     wallet_balance = (
         subscription.client.wallet_balance
     )
 
-    balance_due = (
-        package_price - wallet_balance
+    top_up_required = calculate_required_top_up(
+        invoice,
+        wallet_balance,
     )
 
-    if balance_due < 0:
+    return (
+        f"Dear {subscription.client.name}, "
+        f"your internet expired on {expiry_date}. "
+        f"Pay KES {top_up_required:.2f} via "
+        f"Paybill 5489004, "
+        f"Acc: {subscription.client.account_number} "
+        f"to reactivate. Nexavo."
+    )
+#SUSPENDED MESSAGE BUILDER
+def build_suspended_message(subscription):
+    """
+    Build a suspended subscription notification
+    using the subscription's invoice.
+    """
 
-        balance_due = 0
+    invoice = (
+        Invoice.objects
+        .filter(
+            subscription=subscription,
+        )
+        .order_by(
+            "-created_at",
+        )
+        .first()
+    )
+
+    if not invoice:
+
+        return (
+            f"Dear {subscription.client.name}, "
+            f"your internet is suspended. "
+            f"Please contact Nexavo for assistance. "
+            f"Help: 0791018986."
+        )
+
+    wallet_balance = (
+        subscription.client.wallet_balance
+    )
+
+    top_up_required = calculate_required_top_up(
+        invoice,
+        wallet_balance,
+    )
 
     return (
-        f"Dear {subscription.client.name}, your internet is suspended. "
-        f"Pay KES {balance_due:.2f} via Paybill 5489004, Acc: {subscription.client.account_number} "
-        f"to reactivate. Help: 0791018986. Nexavo."
+        f"Dear {subscription.client.name}, "
+        f"your internet is suspended. "
+        f"Pay KES {top_up_required:.2f} via "
+        f"Paybill 5489004, "
+        f"Acc: {subscription.client.account_number} "
+        f"to reactivate. "
+        f"Help: 0791018986. Nexavo."
     )

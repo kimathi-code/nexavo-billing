@@ -4,6 +4,9 @@ from clients.models import (
     Invoice,
     Subscription
 )
+import logging
+
+logger = logging.getLogger("invoice")
 
 
 def generate_invoice_for_subscription(
@@ -16,12 +19,27 @@ def generate_invoice_for_subscription(
     ).exists()
 
     if existing_invoice:
+        logger.info(
+
+            "Pending invoice already exists "
+            "for subscription %s.",
+
+            subscription.id,
+
+        )
 
         return None
 
     package = subscription.package
 
     if not package:
+        logger.warning(
+
+            "Subscription %s has no package.",
+
+            subscription.id,
+
+        )
 
         return None
 
@@ -50,5 +68,13 @@ def generate_invoice_for_subscription(
             )
         )
     )
+    logger.info(
 
+        "Generated invoice %s for %s.",
+
+        invoice.invoice_number,
+
+        subscription.client.account_number,
+
+    )
     return invoice

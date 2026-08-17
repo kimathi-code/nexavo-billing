@@ -8,7 +8,8 @@ from .models import (
     Payment,
     Invoice,
     MpesaTransaction,
-    StkPushRequest
+    StkPushRequest,
+    ExtensionLog
 )
 
 
@@ -182,3 +183,39 @@ class InvoiceAdmin(admin.ModelAdmin):
         'status',
         'due_date'
     )
+
+@admin.register(ExtensionLog)
+class ExtensionLogAdmin(admin.ModelAdmin):
+
+    list_display = (
+        "client",
+        "days_added",
+        "previous_end_date",
+        "new_end_date",
+        "reason",
+        "performed_by",
+        "created_at",
+    )
+
+    list_filter = (
+        "created_at",
+    )
+
+    search_fields = (
+        "client__name",
+        "client__account_number",
+        "performed_by__username",
+        "reason",
+    )
+   
+    readonly_fields = (
+        "subscription",
+        "client",
+        "days_added",
+        "previous_end_date",
+        "new_end_date",
+        "reason",
+        "performed_by",
+        "created_at",
+    )
+  

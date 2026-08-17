@@ -16,6 +16,10 @@ from clients.models import (
     Payment,
     StkPushRequest,
 )
+from common.phone import (
+    normalize_phone_number,
+    is_valid_phone_number,
+)
 
 from services.mpesa_service import MpesaService
 
@@ -76,7 +80,10 @@ def get_recent_payments(
         Payment.objects
         .filter(
             client=client,
-            status="completed",
+            status__in=[
+                "completed",
+                "credit"
+            ]
         )
         .order_by(
             "-created_at",
@@ -311,10 +318,33 @@ def validate_payment_business_rules(
 def initiate_mpesa_payment(
     client,
     amount,
+    override_phone=None,
 ):
     """
     Initiate M-Pesa STK Push.
     """
+    raw_phone = (
+        override_phone
+        or client.phone
+    )
+
+    payment_phone = normalize_phone_number(
+        raw_phone
+    )
+
+    if not is_valid_phone_number(
+        payment_phone
+    ):
+
+        return {
+
+            "success": False,
+
+            "error": (
+                "Please enter a valid phone number."
+            ),
+
+        }
 
     logger.info(
         "Initiating STK Push for account %s.",
@@ -324,6 +354,7 @@ def initiate_mpesa_payment(
     response = mpesa_service.initiate_stk_push(
         client,
         amount,
+        override_phone=payment_phone,
     )
 
     if response.get("success"):

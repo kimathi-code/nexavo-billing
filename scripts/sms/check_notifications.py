@@ -36,12 +36,6 @@ def run_check():
 
         print(message)
 
-        NotificationLog.objects.create(
-            client=sub.client,
-            notification_type='expiring',
-            message=message
-        )
-
         print("-" * 50)
 
     print("\nEXPIRED CLIENTS\n")
@@ -54,12 +48,6 @@ def run_check():
 
         print(message)
 
-        NotificationLog.objects.create(
-            client=sub.client,
-            notification_type='expired',
-            message=message
-    )
-
     print("-" * 50)
 
     print("\nSUSPENDED CLIENTS\n")
@@ -71,12 +59,6 @@ def run_check():
         )
 
         print(message)
-
-        NotificationLog.objects.create(
-            client=sub.client,
-            notification_type='suspended',
-            message=message
-        )
 
         print("-" * 50)
 

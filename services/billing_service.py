@@ -4,6 +4,10 @@ from django.db import transaction
 
 from services.subscription_service import renew_subscription
 from clients.models import Subscription
+from services.invoice_service import (
+    get_pending_invoice,
+    apply_payment_to_invoice,
+)
 
 
 logger = logging.getLogger("billing")
@@ -80,12 +84,37 @@ def process_client_renewal(client):
         with transaction.atomic():
 
             client.wallet_balance -= package.price
+
             client.save()
 
+            invoice = get_pending_invoice(
+                client
+            )
+
+            if invoice:
+
+                apply_payment_to_invoice(
+
+                    invoice,
+
+                    package.price,
+
+                )
+
+                logger.info(
+                    "Invoice %s settled using wallet "
+                    "payment.",
+                    invoice.invoice_number,
+                )
+
             renew_subscription(
+
                 client=client,
+
                 package=package,
-                payment_amount=package.price
+
+                payment_amount=package.price,
+
             )
 
         wallet_after = client.wallet_balance

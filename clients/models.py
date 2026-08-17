@@ -1,6 +1,7 @@
 from django.db import models
 from datetime import date, timedelta
 from django.contrib.auth.models import User
+from django.conf import settings
 
 # Client model
 
@@ -147,6 +148,71 @@ class Subscription(models.Model):
         return f"{self.client.name} - No Package"
 
 
+# SUBSCRIPTION EXTENSION LOG
+class ExtensionLog(models.Model):
+
+    subscription = models.ForeignKey(
+        Subscription,
+        on_delete=models.CASCADE,
+        related_name='extension_logs'
+    )
+
+    client = models.ForeignKey(
+        Client,
+        on_delete=models.CASCADE,
+        related_name='extension_logs'
+    )
+
+    days_added = models.PositiveIntegerField(
+        help_text="Number of days added to the subscription."
+    )
+
+    previous_end_date = models.DateField(
+        null=True,
+        blank=True,
+        help_text="Expiry date before the extension was applied."
+    )
+
+    new_end_date = models.DateField(
+        help_text="New expiry date after the extension was applied."
+    )
+
+    reason = models.TextField(
+        blank=True,
+        null=True,
+        help_text="Reason for the extension."
+    )
+
+    performed_by = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name='performed_extensions',
+        help_text="Admin user who performed the extension."
+    )
+
+    created_at = models.DateTimeField(
+        auto_now_add=True
+    )
+
+    class Meta:
+
+        ordering = [
+            "-created_at"
+        ]
+
+        verbose_name = "Extension Log"
+
+        verbose_name_plural = "Extension Logs"
+
+    def __str__(self):
+
+        return (
+            f"{self.client.name} - "
+            f"{self.days_added} day extension - "
+            f"{self.created_at}"
+        )
 #MIKROTIK LOG MODEL
 class MikroTikLog(models.Model):
 

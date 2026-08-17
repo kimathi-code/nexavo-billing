@@ -114,7 +114,11 @@ def get_recent_invoices(
             invoice.due_date - today
         ).days
 
-        if days_until_due > 0:
+        if invoice.status == "paid":
+
+            due_message = "Paid"
+
+        elif days_until_due > 0:
 
             due_message = (
                 f"Due in {days_until_due} days"
@@ -175,7 +179,13 @@ def get_recent_invoices(
                 "due_message": due_message,
 
                 "is_overdue": (
+
+                    invoice.status != "paid"
+
+                    and
+
                     invoice.due_date < today
+
                 ),
 
             }

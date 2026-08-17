@@ -11,7 +11,9 @@ from clients.models import (
     MpesaTransaction,
     StkPushRequest
 )
-
+from common.phone import (
+    normalize_phone_number,
+)
 from dotenv import load_dotenv
 
 load_dotenv()
@@ -67,22 +69,7 @@ class MpesaService:
             "access_token"
         ]
     
-    # helper function to format phone number to Daraja format
-    def format_phone_number(self, phone):
-
-        phone = phone.strip()
-
-        if phone.startswith("+254"):
-            return phone[1:]
-
-        if phone.startswith("07"):
-            return "254" + phone[1:]
-
-        if phone.startswith("7"):
-            return "254" + phone
-
-        return phone
-
+    
     #INTIATE STK PUSH
 
     def initiate_stk_push(
@@ -126,6 +113,10 @@ class MpesaService:
             or client.phone
         )
 
+        phone = normalize_phone_number(
+            payment_phone
+        )
+
         logger.info(
             "Initiating STK Push | "
             "Account: %s | "
@@ -134,10 +125,6 @@ class MpesaService:
             client.account_number,
             amount,
             payment_phone,
-        )
-
-        phone = self.format_phone_number(
-            payment_phone
         )
 
         payload = {

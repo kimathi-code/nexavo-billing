@@ -482,6 +482,10 @@ def initiate_mpesa_payment_view(request):
         )
     )
 
+    override_phone = request.POST.get(
+    "phone"
+)
+
     validation = validate_payment_request(
         account_number,
         amount,
@@ -566,6 +570,8 @@ def initiate_mpesa_payment_view(request):
         validation["client"],
 
         validation["amount"],
+
+        override_phone=override_phone
 
     )
 
