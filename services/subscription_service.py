@@ -85,64 +85,98 @@ def activate_subscription_connection(client: Client) -> bool:
 
 @transaction.atomic
 def renew_subscription(
-    client: Client,
-    package: Package,
+    subscription: Subscription,
     payment_amount: Decimal
 ) -> Subscription:
-    """
-    Extends or creates a client subscription upon payment 
-    and triggers connection activation.
-    """
-    today = timezone.now().date()
 
-    subscription = (
+    locked_subscription = (
         Subscription.objects
         .select_for_update()
-        .filter(client=client)
-        .order_by('-end_date')
-        .first()
+        .select_related("package", "client")
+        .get(pk=subscription.pk)
     )
 
-    # EXISTING SUBSCRIPTION
-    if subscription:
-        # If still active, extend from current end date
-        if subscription.end_date and subscription.end_date >= today:
-            subscription.end_date += timedelta(days=package.duration_days)
-        # If expired, renew from today
-        else:
-            subscription.start_date = today
-            subscription.end_date = today + timedelta(days=package.duration_days)
+    today = timezone.now().date()
 
-        subscription.package = package
-        subscription.amount = payment_amount
-        subscription.status = 'active'
-        subscription.save()
+    package = locked_subscription.package
 
-    # NEW SUBSCRIPTION
+    if not package:
+        raise ValueError(
+            "Subscription has no package."
+        )
+
+    # Active subscription
+    if (
+        locked_subscription.end_date
+        and locked_subscription.end_date >= today
+        and locked_subscription.status == "active"
+    ):
+
+        locked_subscription.end_date += timedelta(
+            days=package.duration_days
+        )
+
+    # Expired/inactive subscription
     else:
-        subscription = Subscription.objects.create(
-            client=client,
-            package=package,
-            amount=payment_amount,
-            start_date=today,
-            end_date=today + timedelta(days=package.duration_days),
-            status='active'
+
+        locked_subscription.start_date = today
+
+        locked_subscription.end_date = (
+            today + timedelta(
+                days=package.duration_days
+            )
         )
 
-    # Trigger connection activation (isolated execution)
-    activation_success = (
-        activate_subscription_connection(client)
+    locked_subscription.amount = payment_amount
+    locked_subscription.status = "active"
+
+    locked_subscription.save(
+        update_fields=[
+            "amount",
+            "start_date",
+            "end_date",
+            "status",
+        ]
     )
 
-    if not activation_success:
+    client = locked_subscription.client
 
-        logger.error(
-            "Subscription renewed but MikroTik activation "
-            "failed for account %s.",
-            client.account_number,
-        )
+    def _activate_after_renewal():
+        try:
+            activation_success = (
+                activate_subscription_connection(client)
+            )
 
-    return subscription
+            if not activation_success:
+
+                logger.error(
+                    "MikroTik activation returned failure "
+                    "for account %s.",
+                    client.account_number,
+                )
+
+                # Future fallback/retry task can go here.
+
+            else:
+
+                logger.info(
+                    "MikroTik activation succeeded "
+                    "for account %s.",
+                    client.account_number,
+                )
+
+        except Exception:
+
+            logger.exception(
+                "Unhandled exception during MikroTik "
+                "activation for account %s.",
+                client.account_number,
+            )
+
+    transaction.on_commit(_activate_after_renewal)
+
+    return locked_subscription
+
 
 # service extension function
 def extend_subscription(

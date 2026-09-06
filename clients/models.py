@@ -1,5 +1,6 @@
 from django.db import models
 from datetime import date, timedelta
+from django.utils import timezone
 from django.contrib.auth.models import User
 from django.conf import settings
 
@@ -219,6 +220,7 @@ class MikroTikLog(models.Model):
     ACTION_CHOICES = [
         ('activated', 'Activated'),
         ('disconnected', 'Disconnected'),
+        ('error', 'Error'),
     ]
 
     client = models.ForeignKey(
@@ -500,10 +502,23 @@ class Invoice(models.Model):
         ('overdue', 'Overdue'),
     ]
 
+    INVOICE_TYPES = [
+        ('subscription', 'Subscription'),
+        ('equipment', 'Equipment'),
+        ('service', 'Service'),
+        ('other', 'Other'),
+    ]
+
     invoice_number = models.CharField(
         max_length=30,
         unique=True,
         blank=True
+    )
+
+    invoice_type = models.CharField(
+        max_length=20,
+        choices=INVOICE_TYPES,
+        default='subscription'
     )
 
     client = models.ForeignKey(
@@ -513,7 +528,9 @@ class Invoice(models.Model):
 
     subscription = models.ForeignKey(
         Subscription,
-        on_delete=models.CASCADE
+        on_delete=models.CASCADE,
+        null=True,
+        blank=True
     )
 
     amount = models.DecimalField(
@@ -553,6 +570,12 @@ class Invoice(models.Model):
         default=0
     )
 
+    renewal_processed_at = models.DateTimeField(
+        null=True,
+        blank=True,
+        help_text="Timestamp when this subscription invoice triggered a renewal."
+    )
+
     def save(self, *args, **kwargs):
 
         is_new = self.pk is None
@@ -581,6 +604,10 @@ class Invoice(models.Model):
 
             self.status = 'paid'
 
+        elif self.due_date < timezone.now().date():
+
+            self.status = 'overdue'
+
         else:
 
             self.status = 'pending'
@@ -598,5 +625,135 @@ class Invoice(models.Model):
         return (
             f"{self.invoice_number} - "
             f"{self.client.name}"
+        )
+    
+# PAYMENT ALLOCATION MODEL
+
+class PaymentAllocation(models.Model):
+    payment = models.ForeignKey(
+        'Payment',
+        on_delete=models.CASCADE,
+        related_name="allocations"
+    )
+    invoice = models.ForeignKey(
+        'Invoice',
+        on_delete=models.CASCADE,
+        related_name="payment_allocations"
+    )
+    amount = models.DecimalField(
+        max_digits=10,
+        decimal_places=2
+    )
+    allocated_at = models.DateTimeField(
+        auto_now_add=True
+    )
+    # NEW: Reversal tracking fields
+    is_reversed = models.BooleanField(
+        default=False,
+        db_index=True,
+        help_text="Flag indicating if this allocation was reversed/unallocated."
+    )
+    reversed_at = models.DateTimeField(
+        null=True,
+        blank=True
+    )
+    reversal_reason = models.TextField(
+        blank=True,
+        null=True,
+        help_text="Reason for unallocation or payment refund."
+    )
+
+    class Meta:
+        ordering = ["-allocated_at"]
+        verbose_name = "Payment Allocation"
+        verbose_name_plural = "Payment Allocations"
+        constraints = [
+            models.CheckConstraint(
+                condition=models.Q(amount__gt=0),
+                name="payment_allocation_amount_positive"
+            )
+        ]
+
+    def __str__(self):
+        status = " [REVERSED]" if self.is_reversed else ""
+        return (
+            f"{self.payment.transaction_code} -> "
+            f"{self.invoice.invoice_number} - "
+            f"KES {self.amount}{status}"
+        )
+
+# Wallet allocation model
+class WalletAllocation(models.Model):
+
+    client = models.ForeignKey(
+        Client,
+        on_delete=models.CASCADE,
+        related_name="wallet_allocations"
+    )
+
+    invoice = models.ForeignKey(
+        Invoice,
+        on_delete=models.CASCADE,
+        related_name="wallet_allocations"
+    )
+
+    amount = models.DecimalField(
+        max_digits=10,
+        decimal_places=2
+    )
+
+    allocated_at = models.DateTimeField(
+        auto_now_add=True
+    )
+
+    # Reversal tracking
+    is_reversed = models.BooleanField(
+        default=False,
+        db_index=True,
+        help_text=(
+            "Flag indicating whether this wallet allocation "
+            "was reversed."
+        )
+    )
+
+    reversed_at = models.DateTimeField(
+        null=True,
+        blank=True
+    )
+
+    reversal_reason = models.TextField(
+        blank=True,
+        null=True,
+        help_text=(
+            "Reason for reversing this wallet allocation."
+        )
+    )
+
+    class Meta:
+
+        ordering = ["-allocated_at"]
+
+        verbose_name = "Wallet Allocation"
+        verbose_name_plural = "Wallet Allocations"
+
+        constraints = [
+            models.CheckConstraint(
+                condition=models.Q(amount__gt=0),
+                name="wallet_allocation_amount_positive"
+            )
+        ]
+
+    def __str__(self):
+
+        status = (
+            " [REVERSED]"
+            if self.is_reversed
+            else ""
+        )
+
+        return (
+            f"{self.client.account_number} -> "
+            f"{self.invoice.invoice_number} - "
+            f"KES {self.amount}{status}"
         )
     

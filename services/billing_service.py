@@ -1,147 +1,154 @@
 import logging
+from typing import TypedDict, Optional
 
 from django.db import transaction
+from django.utils import timezone
 
+from clients.models import Invoice, Subscription
 from services.subscription_service import renew_subscription
-from clients.models import Subscription
-from services.invoice_service import (
-    get_pending_invoice,
-    apply_payment_to_invoice,
-)
 
 
 logger = logging.getLogger("billing")
 
 
-def process_client_renewal(client):
-    """
-    Attempt to renew a single client's subscription using
-    the available wallet balance.
+class RenewalResult(TypedDict):
+    success: bool
+    renewed: bool
+    message: str
+    subscription: Optional[Subscription]
 
-    Returns:
-        {
-            "success": bool,
-            "renewed": bool,
-            "message": str
-        }
-    """
 
-    subscription = (
-        Subscription.objects
-        .filter(client=client)
-        .order_by("-end_date")
-        .first()
+@transaction.atomic
+def process_client_renewal(
+    invoice: Invoice
+) -> RenewalResult:
+
+
+    locked_invoice = (
+        Invoice.objects
+        .select_for_update()
+        .select_related("client")
+        .get(pk=invoice.pk)
     )
 
-    if not subscription:
+    # Ignore non-subscription invoices
+    if locked_invoice.invoice_type != "subscription":
 
-        logger.warning(
-            f"No subscription found for {client.account_number}"
+        logger.info(
+            "Invoice %s is type '%s'. "
+            "No subscription renewal required.",
+            locked_invoice.invoice_number,
+            locked_invoice.invoice_type,
+        )
+
+        return {
+            "success": True,
+            "renewed": False,
+            "message": "Non-subscription invoice paid",
+            "subscription": None,
+        }
+
+    # Idempotency
+    if locked_invoice.renewal_processed_at:
+
+        logger.info(
+            "Renewal already processed for invoice %s at %s.",
+            locked_invoice.invoice_number,
+            locked_invoice.renewal_processed_at,
+        )
+
+        return {
+            "success": True,
+            "renewed": False,
+            "message": "Subscription renewal already processed",
+            "subscription": None,
+        }
+
+    # Validate subscription relationship
+    if not locked_invoice.subscription_id:
+
+        logger.error(
+            "Subscription invoice %s has no associated subscription.",
+            locked_invoice.invoice_number,
         )
 
         return {
             "success": False,
             "renewed": False,
-            "message": "No subscription found"
+            "message": "Subscription invoice has no subscription",
+            "subscription": None,
         }
 
+    # Confirm invoice is fully paid
+    if (
+        locked_invoice.status != "paid"
+        or locked_invoice.balance_due > 0
+    ):
+
+        logger.info(
+            "Subscription invoice %s is not fully paid. "
+            "Status: %s | Balance: %s",
+            locked_invoice.invoice_number,
+            locked_invoice.status,
+            locked_invoice.balance_due,
+        )
+
+        return {
+            "success": True,
+            "renewed": False,
+            "message": "Subscription invoice not fully paid",
+            "subscription": None,
+        }
+
+    # Lock subscription
+    subscription = (
+        Subscription.objects
+        .select_for_update()
+        .select_related("package")
+        .get(pk=locked_invoice.subscription_id)
+    )
+
+    client = locked_invoice.client
     package = subscription.package
 
     if not package:
 
-        logger.warning(
-            f"No package assigned for {client.account_number}"
+        logger.error(
+            "Subscription %s for account %s has no package.",
+            subscription.id,
+            client.account_number,
         )
 
         return {
             "success": False,
             "renewed": False,
-            "message": "No package assigned"
+            "message": "Subscription has no package",
+            "subscription": None,
         }
 
-    if client.wallet_balance < package.price:
+    # Renew
+    renewed_subscription = renew_subscription(
+        subscription=subscription,
+        payment_amount=locked_invoice.amount,
+    )
 
-        logger.warning(
-            f"Account {client.account_number} "
-            f"has insufficient wallet balance. "
-            f"Wallet={client.wallet_balance}, "
-            f"Required={package.price}"
-        )
+    # Mark processed only after successful renewal
+    locked_invoice.renewal_processed_at = timezone.now()
 
-        subscription.status = "expired"
-        subscription.save()
+    locked_invoice.save(
+        update_fields=["renewal_processed_at"]
+    )
 
-        return {
-            "success": True,
-            "renewed": False,
-            "message": "Insufficient wallet balance"
-        }
+    logger.info(
+        "Subscription renewed successfully for account %s "
+        "through invoice %s.",
+        client.account_number,
+        locked_invoice.invoice_number,
+    )
 
-    try:
-
-        wallet_before = client.wallet_balance
-
-        with transaction.atomic():
-
-            client.wallet_balance -= package.price
-
-            client.save()
-
-            invoice = get_pending_invoice(
-                client
-            )
-
-            if invoice:
-
-                apply_payment_to_invoice(
-
-                    invoice,
-
-                    package.price,
-
-                )
-
-                logger.info(
-                    "Invoice %s settled using wallet "
-                    "payment.",
-                    invoice.invoice_number,
-                )
-
-            renew_subscription(
-
-                client=client,
-
-                package=package,
-
-                payment_amount=package.price,
-
-            )
-
-        wallet_after = client.wallet_balance
-
-        logger.info(
-            f"Account: {client.account_number} | "
-            f"Wallet Before: {wallet_before} | "
-            f"Deducted: {package.price} | "
-            f"Wallet After: {wallet_after} | "
-            f"Status: SUCCESS"
-        )
-
-        return {
-            "success": True,
-            "renewed": True,
-            "message": "Subscription renewed successfully"
-        }
-
-    except Exception:
-
-        logger.exception(
-            f"Renewal failed for {client.account_number}"
-        )
-
-        return {
-            "success": False,
-            "renewed": False,
-            "message": "Renewal failed"
-        }
-
+    return {
+        "success": True,
+        "renewed": True,
+        "message": "Subscription renewed successfully",
+        "subscription": renewed_subscription,
+    }
