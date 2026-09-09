@@ -626,6 +626,53 @@ class Invoice(models.Model):
             f"{self.invoice_number} - "
             f"{self.client.name}"
         )
+
+
+# invoice item model
+class InvoiceItem(models.Model):
+    ITEM_TYPES = [
+        ("equipment", "Equipment"),
+        ("service", "Service"),
+        ("subscription", "Subscription"),
+        ("other", "Other"),
+    ]
+
+    invoice = models.ForeignKey(
+        Invoice,
+        on_delete=models.CASCADE,
+        related_name="items",
+    )
+
+    description = models.CharField(
+        max_length=255
+    )
+
+    quantity = models.PositiveIntegerField(
+        default=1
+    )
+
+    unit_price = models.DecimalField(
+        max_digits=10,
+        decimal_places=2
+    )
+
+    total = models.DecimalField(
+        max_digits=10,
+        decimal_places=2
+    )
+
+    item_type = models.CharField(
+        max_length=20,
+        choices=ITEM_TYPES,
+        default="other",
+    )
+
+    def __str__(self):
+        return (
+            f"{self.description} - "
+            f"{self.quantity} × {self.unit_price} = {self.total}"
+        )
+    
     
 # PAYMENT ALLOCATION MODEL
 
@@ -756,4 +803,4 @@ class WalletAllocation(models.Model):
             f"{self.invoice.invoice_number} - "
             f"KES {self.amount}{status}"
         )
-    
+
