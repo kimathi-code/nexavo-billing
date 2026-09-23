@@ -18,3 +18,7 @@ logs/
 
 # VS Code
 .vscode/
+
+
+# MikroTik binary backups
+*.backup
