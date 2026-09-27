@@ -22,3 +22,11 @@ logs/
 
 # MikroTik binary backups
 *.backup
+
+# Database migration artifacts
+nexavo_sqlite_data.json
+isp_system/legacy_settings.py
+
+# Local development databases
+db.sqlite3
+db_backup_*.sqlite3
