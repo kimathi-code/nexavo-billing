@@ -1,7 +1,16 @@
 from datetime import timedelta
-
+from unittest.mock import patch
 from django.test import TestCase
 from django.utils import timezone
+from services.payment_matching_service import match_payment_reference
+from clients.models import Client
+from hotspot.models import (
+    HotspotLocation,
+    HotspotPlan,
+    HotspotPurchase,
+    HotspotSession,
+    HotspotVoucher,
+)
 
 from hotspot.models import HotspotPlan, HotspotVoucher
 from hotspot.services.voucher_service import (
@@ -375,6 +384,179 @@ class HotspotPurchaseServiceTests(TestCase):
                 phone_number="+254712345678",
             )
 
+    def test_payment_reference_is_generated(self):
+        purchase = create_hotspot_purchase(
+            plan=self.plan,
+            payment_method="mpesa",
+            phone_number="+254700000000",
+        )
+
+    def test_payment_reference_collision_is_retried(self):
+        purchase = create_hotspot_purchase(
+            plan=self.plan,
+            payment_method="mpesa",
+            phone_number="+254700000005",
+        )
+
+        existing_reference = purchase.payment_reference
+
+        references = iter([
+            existing_reference,
+            "HS-IJKLMNOP",
+        ])
+
+        with patch.object(
+            HotspotPurchase,
+            "generate_payment_reference",
+            side_effect=lambda: next(references),
+        ):
+            second_purchase = HotspotPurchase(
+                plan=self.plan,
+                amount=self.plan.price,
+                payment_method="mpesa",
+                phone_number="+254700000006",
+            )
+            second_purchase.save()
+
+        self.assertEqual(
+            second_purchase.payment_reference,
+            "HS-IJKLMNOP",
+        )
+
+        self.assertNotEqual(
+            second_purchase.payment_reference,
+            existing_reference,
+        )
+
+    def test_payment_references_are_unique(self):
+        purchase_one = create_hotspot_purchase(
+            plan=self.plan,
+            payment_method="mpesa",
+            phone_number="+254700000001",
+        )
+
+        purchase_two = create_hotspot_purchase(
+            plan=self.plan,
+            payment_method="mpesa",
+            phone_number="+254700000002",
+        )
+
+        self.assertNotEqual(
+            purchase_one.payment_reference,
+            purchase_two.payment_reference,
+        )
+
+    def test_payment_reference_does_not_change_when_purchase_is_saved(self):
+        purchase = create_hotspot_purchase(
+            plan=self.plan,
+            payment_method="mpesa",
+            phone_number="+254700000003",
+        )
+
+        original_reference = purchase.payment_reference
+
+        purchase.phone_number = "+254711111111"
+        purchase.save()
+
+        purchase.refresh_from_db()
+
+        self.assertEqual(
+            purchase.payment_reference,
+            original_reference,
+        )
+
+    def test_transaction_reference_is_independent_of_payment_reference(self):
+        purchase = create_hotspot_purchase(
+            plan=self.plan,
+            payment_method="mpesa",
+            phone_number="+254700000004",
+        )
+
+        payment_reference = purchase.payment_reference
+
+        self.assertIsNone(purchase.transaction_reference)
+
+        purchase.transaction_reference = "QABC123XYZ"
+        purchase.save()
+
+        purchase.refresh_from_db()
+
+        self.assertEqual(
+            purchase.payment_reference,
+            payment_reference,
+        )
+        self.assertEqual(
+            purchase.transaction_reference,
+            "QABC123XYZ",
+        )
+
+class PaymentMatchingServiceTests(TestCase):
+
+    def setUp(self):
+        self.plan = HotspotPlan.objects.create(
+            name="Test 2 Hours",
+            price=10,
+            duration_minutes=120,
+            download_speed_kbps=5000,
+            upload_speed_kbps=2000,
+            simultaneous_devices=1,
+        )
+
+        self.client = Client.objects.create(
+            name="Test Client",
+            phone="+254712345678",
+            email="testclient@example.com",
+            account_number="NXV-1001",
+            location="Test Location",
+        )
+
+    def test_client_payment_reference_matches_client(self):
+        result = match_payment_reference("NXV-1001")
+
+        self.assertTrue(result.matched)
+        self.assertEqual(result.payment_type, "client")
+        self.assertEqual(result.client, self.client)
+        self.assertIsNone(result.hotspot_purchase)
+
+    def test_hotspot_payment_reference_matches_purchase(self):
+        purchase = create_hotspot_purchase(
+            plan=self.plan,
+            payment_method="mpesa",
+            phone_number="+254712345679",
+        )
+
+        result = match_payment_reference(
+            purchase.payment_reference
+        )
+
+        self.assertTrue(result.matched)
+        self.assertEqual(result.payment_type, "hotspot")
+        self.assertEqual(result.hotspot_purchase, purchase)
+        self.assertIsNone(result.client)
+
+    def test_unknown_payment_reference_is_unmatched(self):
+        result = match_payment_reference("UNKNOWN-12345")
+
+        self.assertFalse(result.matched)
+        self.assertIsNone(result.payment_type)
+        self.assertIsNone(result.client)
+        self.assertIsNone(result.hotspot_purchase)
+
+    def test_payment_reference_is_normalized(self):
+        result = match_payment_reference("  nxv-1001  ")
+
+        self.assertTrue(result.matched)
+        self.assertEqual(result.payment_type, "client")
+        self.assertEqual(result.client, self.client)
+
+    def test_empty_payment_reference_is_unmatched(self):
+        result = match_payment_reference("")
+
+        self.assertFalse(result.matched)
+        self.assertIsNone(result.payment_type)
+        self.assertIsNone(result.client)
+        self.assertIsNone(result.hotspot_purchase)
+
 class HotspotVoucherRedemptionTests(TestCase):
 
     def setUp(self):
@@ -684,3 +866,6 @@ class HotspotSessionServiceTests(TestCase):
             HotspotSession.objects.count(),
             0,
         )
+
+
+

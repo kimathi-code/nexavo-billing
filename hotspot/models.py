@@ -1,8 +1,8 @@
 import re
 import secrets
 import string
-from django.db import models
 from django.core.exceptions import ValidationError
+from django.db import IntegrityError, models, transaction
 
 
 # Hotspot location model
@@ -250,6 +250,7 @@ class HotspotVoucher(models.Model):
         self.full_clean()
 
         super().save(*args, **kwargs)
+
 # Hotspot purchase model
 class HotspotPurchase(models.Model):
     PAYMENT_METHODS = [
@@ -263,6 +264,15 @@ class HotspotPurchase(models.Model):
         ("failed", "Failed"),
         ("cancelled", "Cancelled"),
     ]
+
+    # Added payment_reference field
+    payment_reference = models.CharField(
+        max_length=20,
+        unique=True,
+        editable=False,
+        blank=True,
+        null=True
+    )
 
     plan = models.ForeignKey(
         HotspotPlan,
@@ -322,7 +332,51 @@ class HotspotPurchase(models.Model):
         verbose_name_plural = "Hotspot Purchases"
 
     def __str__(self):
-        return f"{self.plan.name} - KES {self.amount}"
+        return (
+            f"{self.payment_reference or 'Pending'} - "
+            f"{self.plan.name} (KES {self.amount})"
+        )
+
+    # Generate a unique payment reference for each purchase
+    @staticmethod
+    def generate_payment_reference():
+        """
+        Generates a unique reference in the format:
+        HS-8F3K92LM
+        """
+        alphabet = string.ascii_uppercase + string.digits
+
+        while True:
+            random_str = "".join(
+                secrets.choice(alphabet)
+                for _ in range(8)
+            )
+            reference = f"HS-{random_str}"
+
+            if not HotspotPurchase.objects.filter(
+                payment_reference=reference
+            ).exists():
+                return reference
+
+    def save(self, *args, **kwargs):
+        if self.payment_reference:
+            super().save(*args, **kwargs)
+            return
+
+        for _ in range(10):
+            self.payment_reference = self.generate_payment_reference()
+
+            try:
+                with transaction.atomic():
+                    super().save(*args, **kwargs)
+                return
+            except IntegrityError:
+                self.payment_reference = None
+
+        raise IntegrityError(
+            "Unable to generate a unique Hotspot payment reference "
+            "after multiple attempts."
+        )
 
 # Hotspot session model
 class HotspotSession(models.Model):
