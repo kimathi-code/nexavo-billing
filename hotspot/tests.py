@@ -2,8 +2,15 @@ from datetime import timedelta
 from unittest.mock import patch
 from django.test import TestCase
 from django.utils import timezone
+from io import StringIO
+from django.core.management import call_command
 from services.payment_matching_service import match_payment_reference
-from clients.models import Client
+from clients.models import (
+    Client,
+    Payment,
+    MpesaTransaction,
+)
+
 from hotspot.models import (
     HotspotLocation,
     HotspotPlan,
@@ -49,6 +56,9 @@ from hotspot.services.session_service import (
     record_session_usage,
     end_session,
 )
+
+from services.mpesa_service import process_payment_transaction
+
 
 class HotspotVoucherServiceTests(TestCase):
     def setUp(self):
@@ -255,8 +265,82 @@ class HotspotVoucherServiceTests(TestCase):
             "expired",
         )
 
+class HotspotVoucherExpiryCommandTests(TestCase):
 
-# purchase tests
+    def setUp(self):
+        self.plan = HotspotPlan.objects.create(
+            name="Expiry Test Plan",
+            price=10,
+            duration_minutes=120,
+            download_speed_kbps=5000,
+            upload_speed_kbps=2000,
+            simultaneous_devices=1,
+        )
+
+    def test_command_expires_due_vouchers(self):
+        voucher = generate_voucher(self.plan)
+
+        activated = activate_voucher(
+            voucher,
+            "AA:BB:CC:DD:EE:FF",
+        )
+
+        activated.expires_at = timezone.now() - timedelta(
+            minutes=1
+        )
+        activated.save(
+            update_fields=[
+                "expires_at",
+                "updated_at",
+            ]
+        )
+
+        output = StringIO()
+
+        call_command(
+            "expire_hotspot_vouchers",
+            stdout=output,
+        )
+
+        activated.refresh_from_db()
+
+        self.assertEqual(
+            activated.status,
+            "expired",
+        )
+
+        self.assertIn(
+            "Expired 1 hotspot voucher(s).",
+            output.getvalue(),
+        )
+
+    def test_command_does_not_expire_future_vouchers(self):
+        voucher = generate_voucher(self.plan)
+
+        activated = activate_voucher(
+            voucher,
+            "AA:BB:CC:DD:EE:FF",
+        )
+
+        output = StringIO()
+
+        call_command(
+            "expire_hotspot_vouchers",
+            stdout=output,
+        )
+
+        activated.refresh_from_db()
+
+        self.assertEqual(
+            activated.status,
+            "active",
+        )
+
+        self.assertIn(
+            "No expired hotspot vouchers found.",
+            output.getvalue(),
+        )
+
 class HotspotPurchaseServiceTests(TestCase):
 
     def setUp(self):
@@ -556,6 +640,439 @@ class PaymentMatchingServiceTests(TestCase):
         self.assertIsNone(result.payment_type)
         self.assertIsNone(result.client)
         self.assertIsNone(result.hotspot_purchase)
+
+class MpesaPaymentProcessingTests(TestCase):
+
+    def setUp(self):
+        self.plan = HotspotPlan.objects.create(
+            name="Test 2 Hours",
+            price=10,
+            duration_minutes=120,
+            download_speed_kbps=5000,
+            upload_speed_kbps=2000,
+            simultaneous_devices=1,
+        )
+
+        self.client = Client.objects.create(
+            name="Test Client",
+            phone="+254712345678",
+            email="mpesatest@example.com",
+            account_number="NXV-2001",
+            location="Test Location",
+        )
+
+    def test_client_payment_creates_payment(self):
+        result = process_payment_transaction(
+            receipt_number="QCLIENT001",
+            account_reference="NXV-2001",
+            phone_number="+254712345678",
+            amount="100",
+        )
+
+        self.assertTrue(result["success"])
+        self.assertEqual(
+            result["payment_type"],
+            "client",
+        )
+
+        self.assertEqual(
+            Payment.objects.count(),
+            1,
+        )
+
+        payment = Payment.objects.get(
+            transaction_code="QCLIENT001"
+        )
+
+        self.assertEqual(
+            payment.client,
+            self.client,
+        )
+
+        self.assertEqual(
+            payment.amount,
+            100,
+        )
+
+        transaction = MpesaTransaction.objects.get(
+            receipt_number="QCLIENT001"
+        )
+
+        self.assertEqual(
+            transaction.processing_status,
+            "processed",
+        )
+
+    def test_hotspot_payment_confirms_purchase_and_issues_voucher(self):
+        purchase = create_hotspot_purchase(
+            plan=self.plan,
+            payment_method="mpesa",
+            phone_number="+254700000001",
+        )
+
+        result = process_payment_transaction(
+            receipt_number="QHOTSPOT001",
+            account_reference=purchase.payment_reference,
+            phone_number="+254700000001",
+            amount="10",
+        )
+
+        self.assertTrue(result["success"])
+        self.assertEqual(
+            result["payment_type"],
+            "hotspot",
+        )
+
+        purchase.refresh_from_db()
+
+        self.assertEqual(
+            purchase.status,
+            "paid",
+        )
+
+        self.assertIsNotNone(
+            purchase.voucher,
+        )
+
+        self.assertEqual(
+            purchase.transaction_reference,
+            "QHOTSPOT001",
+        )
+
+        self.assertIsNotNone(
+            purchase.paid_at,
+        )
+
+        self.assertEqual(
+            result["purchase_id"],
+            purchase.id,
+        )
+
+        self.assertEqual(
+            result["voucher_id"],
+            purchase.voucher_id,
+        )
+
+        self.assertEqual(
+            Payment.objects.count(),
+            0,
+        )
+
+        transaction = MpesaTransaction.objects.get(
+            receipt_number="QHOTSPOT001"
+        )
+
+        self.assertEqual(
+            transaction.processing_status,
+            "processed",
+        )
+
+    def test_hotspot_payment_fails_when_amount_does_not_match_purchase(self):
+        purchase = create_hotspot_purchase(
+            plan=self.plan,
+            payment_method="mpesa",
+            phone_number="+254700000004",
+        )
+
+        result = process_payment_transaction(
+            receipt_number="QHOTSPOTMISMATCH001",
+            account_reference=purchase.payment_reference,
+            phone_number="+254700000004",
+            amount="20",
+        )
+
+        self.assertFalse(result["success"])
+        self.assertEqual(
+            result["payment_type"],
+            "hotspot",
+        )
+
+        purchase.refresh_from_db()
+
+        self.assertEqual(
+            purchase.status,
+            "pending",
+        )
+
+        self.assertIsNone(
+            purchase.voucher,
+        )
+
+        self.assertIsNone(
+            purchase.transaction_reference,
+        )
+
+        transaction = MpesaTransaction.objects.get(
+            receipt_number="QHOTSPOTMISMATCH001"
+        )
+
+        self.assertEqual(
+            transaction.processing_status,
+            "failed",
+        )
+
+        self.assertIsNotNone(
+            transaction.processed_at,
+        )
+
+        self.assertEqual(
+            Payment.objects.count(),
+            0,
+        )
+
+    def test_hotspot_payment_fails_when_amount_is_less_than_purchase(self):
+        purchase = create_hotspot_purchase(
+            plan=self.plan,
+            payment_method="mpesa",
+            phone_number="+254700000005",
+        )
+
+        result = process_payment_transaction(
+            receipt_number="QHOTSPOTMISMATCH002",
+            account_reference=purchase.payment_reference,
+            phone_number="+254700000005",
+            amount="5",
+        )
+
+        self.assertFalse(result["success"])
+        self.assertEqual(
+            result["payment_type"],
+            "hotspot",
+        )
+
+        purchase.refresh_from_db()
+
+        self.assertEqual(
+            purchase.status,
+            "pending",
+        )
+
+        self.assertIsNone(
+            purchase.voucher,
+        )
+
+        self.assertIsNone(
+            purchase.transaction_reference,
+        )
+
+        transaction = MpesaTransaction.objects.get(
+            receipt_number="QHOTSPOTMISMATCH002"
+        )
+
+        self.assertEqual(
+            transaction.processing_status,
+            "failed",
+        )
+
+        self.assertIsNotNone(
+            transaction.processed_at,
+        )
+
+        self.assertEqual(
+            Payment.objects.count(),
+            0,
+        )
+
+    def test_hotspot_payment_confirms_selected_five_hour_plan(self):
+        five_hour_plan = HotspotPlan.objects.create(
+            name="Test 5 Hours",
+            price=20,
+            duration_minutes=300,
+            download_speed_kbps=5000,
+            upload_speed_kbps=2000,
+            simultaneous_devices=1,
+        )
+
+        purchase = create_hotspot_purchase(
+            plan=five_hour_plan,
+            payment_method="mpesa",
+            phone_number="+254700000006",
+        )
+
+        result = process_payment_transaction(
+            receipt_number="QHOTSPOT5HR001",
+            account_reference=purchase.payment_reference,
+            phone_number="+254700000006",
+            amount="20",
+        )
+
+        self.assertTrue(result["success"])
+        self.assertEqual(
+            result["payment_type"],
+            "hotspot",
+        )
+
+        purchase.refresh_from_db()
+
+        self.assertEqual(
+            purchase.status,
+            "paid",
+        )
+
+        self.assertIsNotNone(
+            purchase.voucher,
+        )
+
+        self.assertEqual(
+            purchase.voucher.plan,
+            five_hour_plan,
+        )
+
+        self.assertEqual(
+            purchase.voucher.plan.duration_minutes,
+            300,
+        )
+
+        self.assertEqual(
+            purchase.transaction_reference,
+            "QHOTSPOT5HR001",
+        )
+
+        transaction = MpesaTransaction.objects.get(
+            receipt_number="QHOTSPOT5HR001"
+        )
+
+        self.assertEqual(
+            transaction.processing_status,
+            "processed",
+        )
+
+        self.assertEqual(
+            Payment.objects.count(),
+            0,
+        )
+
+    def test_unknown_reference_marks_transaction_failed(self):
+        result = process_payment_transaction(
+            receipt_number="QUNKNOWN001",
+            account_reference="UNKNOWN-999",
+            phone_number="+254700000002",
+            amount="50",
+        )
+
+        self.assertFalse(result["success"])
+
+        self.assertEqual(
+            MpesaTransaction.objects.count(),
+            1,
+        )
+
+        transaction = MpesaTransaction.objects.get(
+            receipt_number="QUNKNOWN001"
+        )
+
+        self.assertEqual(
+            transaction.processing_status,
+            "failed",
+        )
+
+        self.assertIsNotNone(
+            transaction.processed_at,
+        )
+
+        self.assertEqual(
+            Payment.objects.count(),
+            0,
+        )
+
+    def test_duplicate_receipt_is_rejected(self):
+        first_result = process_payment_transaction(
+            receipt_number="QDUPLICATE001",
+            account_reference="NXV-2001",
+            phone_number="+254712345678",
+            amount="100",
+        )
+
+        second_result = process_payment_transaction(
+            receipt_number="QDUPLICATE001",
+            account_reference="NXV-2001",
+            phone_number="+254712345678",
+            amount="100",
+        )
+
+        self.assertTrue(
+            first_result["success"]
+        )
+
+        self.assertFalse(
+            second_result["success"]
+        )
+
+        self.assertEqual(
+            second_result["message"],
+            "Transaction already exists",
+        )
+
+        self.assertEqual(
+            MpesaTransaction.objects.count(),
+            1,
+        )
+
+        self.assertEqual(
+            Payment.objects.count(),
+            1,
+        )
+
+    def test_hotspot_payment_fails_when_plan_becomes_inactive(self):
+        purchase = create_hotspot_purchase(
+            plan=self.plan,
+            payment_method="mpesa",
+            phone_number="+254700000003",
+        )
+
+        self.plan.active = False
+        self.plan.save(
+            update_fields=["active"]
+        )
+
+        result = process_payment_transaction(
+            receipt_number="QHOTSPOTFAIL001",
+            account_reference=purchase.payment_reference,
+            phone_number="+254700000003",
+            amount="10",
+        )
+
+        self.assertFalse(
+            result["success"]
+        )
+
+        self.assertEqual(
+            result["payment_type"],
+            "hotspot",
+        )
+
+        purchase.refresh_from_db()
+
+        self.assertEqual(
+            purchase.status,
+            "pending",
+        )
+
+        self.assertIsNone(
+            purchase.voucher,
+        )
+
+        self.assertIsNone(
+            purchase.transaction_reference,
+        )
+
+        transaction = MpesaTransaction.objects.get(
+            receipt_number="QHOTSPOTFAIL001"
+        )
+
+        self.assertEqual(
+            transaction.processing_status,
+            "failed",
+        )
+
+        self.assertIsNotNone(
+            transaction.processed_at,
+        )
+
+        self.assertEqual(
+            Payment.objects.count(),
+            0,
+        )
 
 class HotspotVoucherRedemptionTests(TestCase):
 

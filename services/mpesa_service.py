@@ -14,6 +14,16 @@ from clients.models import (
 from common.phone import (
     normalize_phone_number,
 )
+
+from services.payment_matching_service import (
+    match_payment_reference,
+)
+
+from hotspot.services.purchase_service import (
+    confirm_hotspot_purchase,
+    PurchaseServiceError,
+)
+
 from dotenv import load_dotenv
 
 load_dotenv()
@@ -259,7 +269,7 @@ def process_payment_transaction(
 ):
     amount = Decimal(str(amount))
 
-    # Prevent duplicates
+    # Prevent duplicate M-Pesa transactions
     if MpesaTransaction.objects.filter(
         receipt_number=receipt_number
     ).exists():
@@ -269,79 +279,166 @@ def process_payment_transaction(
             "message": "Transaction already exists"
         }
 
-    # Store raw M-Pesa transaction
-    transaction = MpesaTransaction.objects.create(
-
+    # Store raw M-Pesa transaction first
+    mpesa_transaction = MpesaTransaction.objects.create(
         receipt_number=receipt_number,
-
         account_reference=account_reference,
-
         phone_number=phone_number,
-
         amount=amount,
-
         raw_payload=payload,
-
-        processing_status='pending'
+        processing_status="pending"
     )
 
-    try:
+    # Determine which Nexavo business domain owns the payment
+    match = match_payment_reference(
+        account_reference
+    )
 
-        client = Client.objects.get(
-            account_number=account_reference
+    # ---------------------------------------------------------
+    # Unknown payment reference
+    # ---------------------------------------------------------
+
+    if not match.matched:
+
+        mpesa_transaction.processing_status = "failed"
+        mpesa_transaction.processed_at = timezone.now()
+        mpesa_transaction.save(
+            update_fields=[
+                "processing_status",
+                "processed_at",
+            ]
         )
-
-    except Client.DoesNotExist:
-
-        transaction.processing_status = 'failed'
-        transaction.processed_at = (
-            timezone.now()
-        )
-
-        transaction.save()
 
         return {
-
             "success": False,
-
-            "message": (
-                f"Account "
-                f"{account_reference} "
-                f"not found"
-            )
+            "message": match.message,
+            "transaction_id": mpesa_transaction.id,
         }
 
-    # Create Payment record
-    payment = Payment.objects.create(
+    # ---------------------------------------------------------
+    # Registered customer payment
+    # ---------------------------------------------------------
 
-        client=client,
+    if match.payment_type == "client":
 
-        amount=amount,
+        client = match.client
 
-        transaction_code=receipt_number,
+        payment = Payment.objects.create(
+            client=client,
+            amount=amount,
+            transaction_code=receipt_number,
+            account_reference=account_reference,
+            payment_method="mpesa"
+        )
 
-        account_reference=account_reference,
+        mpesa_transaction.processing_status = "processed"
+        mpesa_transaction.processed_at = timezone.now()
+        mpesa_transaction.save(
+            update_fields=[
+                "processing_status",
+                "processed_at",
+            ]
+        )
 
-        payment_method='mpesa'
+        return {
+            "success": True,
+            "payment_type": "client",
+            "client": client.name,
+            "payment_id": payment.id,
+            "transaction_id": mpesa_transaction.id,
+        }
+
+    # ---------------------------------------------------------
+    # Hotspot purchase
+    # ---------------------------------------------------------
+
+    if match.payment_type == "hotspot":
+
+        purchase = match.hotspot_purchase
+
+        # Verify that the M-Pesa payment matches
+        # the amount of the selected Hotspot plan.
+        if amount != purchase.amount:
+
+            mpesa_transaction.processing_status = "failed"
+            mpesa_transaction.processed_at = timezone.now()
+            mpesa_transaction.save(
+                update_fields=[
+                    "processing_status",
+                    "processed_at",
+                ]
+            )
+
+            return {
+                "success": False,
+                "payment_type": "hotspot",
+                "message": (
+                    "M-Pesa amount does not match "
+                    "the selected Hotspot plan."
+                ),
+                "transaction_id": mpesa_transaction.id,
+                "purchase_id": purchase.id,
+            }
+
+        try:
+            purchase = confirm_hotspot_purchase(
+                purchase=purchase,
+                transaction_reference=receipt_number,
+            )
+
+        except PurchaseServiceError as exc:
+
+            mpesa_transaction.processing_status = "failed"
+            mpesa_transaction.processed_at = timezone.now()
+            mpesa_transaction.save(
+                update_fields=[
+                    "processing_status",
+                    "processed_at",
+                ]
+            )
+
+            return {
+                "success": False,
+                "payment_type": "hotspot",
+                "message": str(exc),
+                "transaction_id": mpesa_transaction.id,
+                "purchase_id": purchase.id,
+            }
+
+        mpesa_transaction.processing_status = "processed"
+        mpesa_transaction.processed_at = timezone.now()
+        mpesa_transaction.save(
+            update_fields=[
+                "processing_status",
+                "processed_at",
+            ]
+        )
+
+        return {
+            "success": True,
+            "payment_type": "hotspot",
+            "purchase_id": purchase.id,
+            "voucher_id": purchase.voucher_id,
+            "transaction_id": mpesa_transaction.id,
+        }
+
+    # ---------------------------------------------------------
+    # Defensive fallback
+    # ---------------------------------------------------------
+
+    mpesa_transaction.processing_status = "failed"
+    mpesa_transaction.processed_at = timezone.now()
+    mpesa_transaction.save(
+        update_fields=[
+            "processing_status",
+            "processed_at",
+        ]
     )
-
-    transaction.processing_status = 'processed'
-
-    transaction.processed_at = (
-        timezone.now()
-    )
-
-    transaction.save()
 
     return {
-
-        "success": True,
-
-        "client": client.name,
-
-        "payment_id": payment.id,
-
-        "transaction_id": transaction.id
+        "success": False,
+        "message": "Unsupported payment type.",
+        "transaction_id": mpesa_transaction.id,
     }
 
 #Payload Parser
